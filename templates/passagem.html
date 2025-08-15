@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+
+{% block title %}Passagem de Plantão - Passômetro{% endblock %}
+{% block page_title %}Passagem de Plantão{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Passagem</li>
+{% endblock %}
+
+{% block content %}
+<!-- Status do Plantão -->
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-{{ 'warning' if plantao_ativo.usuario_id != current_user.id else 'info' }}">
+            <h5 class="alert-heading">
+                <i class="fas fa-clock me-2"></i>Plantão em Andamento
+                {% if plantao_ativo.usuario_id != current_user.id %}
+                <span class="badge bg-warning">Visualizando plantão de outro usuário</span>
+                {% endif %}
+            </h5>
+            <p class="mb-0">
+                <strong>{{ plantao_ativo.posto.nome }}</strong> - 
+                <strong>{{ plantao_ativo.usuario.nome }}</strong> - 
+                Iniciado em {{ plantao_ativo.data_inicio.strftime('%d/%m/%Y às %H:%M') }}
+                <span class="float-right">
+                    <strong>Duração: {{ ((now - plantao_ativo.data_inicio).total_seconds() / 3600)|round(1) }} horas</strong>
+                </span>
+            </p>
+            {% if plantao_ativo.usuario_id != current_user.id %}
+            <p class="mb-0 mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Você pode visualizar e encerrar este plantão, mas não pode criar registros ou pendências.
+                </small>
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Resumo do Plantão -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-bar me-2"></i>Resumo do Plantão
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="info-box bg-info">
+                            <span class="info-box-icon">
+                                <i class="fas fa-clipboard-list"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Registros</span>
+                                <span class="info-box-number">{{ registros_plantao|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-warning">
+                            <span class="info-box-icon">
+                                <i class="fas fa-tasks"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Pendências</span>
+                                <span class="info-box-number">{{ pendencias_abertas|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-danger">
+                            <span class="info-box-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Críticos</span>
+                                <span class="info-box-number">{{ registros_plantao|selectattr('prioridade', 'equalto', 'critica')|list|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-success">
+                            <span class="info-box-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Resolvidos</span>
+                                <span class="info-box-number">{{ pendencias_abertas|selectattr('status', 'equalto', 'concluida')|list|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tasks me-2"></i>Ações Rápidas
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if plantao_ativo.usuario_id == current_user.id %}
+                    <a href="{{ url_for('novo_registro') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Novo Registro
+                    </a>
+                    <a href="{{ url_for('nova_pendencia') }}" class="btn btn-warning">
+                        <i class="fas fa-tasks me-2"></i>Nova Pendência
+                    </a>
+                    {% else %}
+                    <button class="btn btn-primary" disabled title="Apenas o proprietário do plantão pode criar registros">
+                        <i class="fas fa-plus me-2"></i>Novo Registro
+                    </button>
+                    <button class="btn btn-warning" disabled title="Apenas o proprietário do plantão pode criar pendências">
+                        <i class="fas fa-tasks me-2"></i>Nova Pendência
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-success" onclick="prepararEncerramento()">
+                        <i class="fas fa-flag-checkered me-2"></i>Preparar Encerramento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pendências em Aberto -->
+{% if pendencias_abertas %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card card-warning">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Pendências em Aberto
+                </h3>
+                <div class="card-tools">
+                    <span class="badge bg-light">{{ pendencias_abertas|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Descrição</th>
+                                <th>Responsável</th>
+                                <th>Prazo</th>
+                                <th>Prioridade</th>
+                                <th>SLA</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pendencia in pendencias_abertas %}
+                            <tr>
+                                <td>
+                                    <strong>{{ pendencia.descricao[:50] }}...</strong>
+                                    <br>
+                                    <small class="text-muted">{{ pendencia.registro.titulo }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ pendencia.responsavel.nome }}</span>
+                                </td>
+                                <td>
+                                    <small>{{ pendencia.prazo.strftime('%d/%m %H:%M') }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' if pendencia.prioridade == 'alta' else 'info' }}">
+                                        {{ pendencia.prioridade.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% set sla_restante = ((pendencia.prazo - now).total_seconds() / 60)|round|int %}
+                                    {% if sla_restante < 0 %}
+                                        <span class="badge bg-danger">Vencido</span>
+                                    {% elif sla_restante < 60 %}
+                                        <span class="badge bg-warning">{{ sla_restante }}min</span>
+                                    {% else %}
+                                        <span class="badge bg-success">{{ (sla_restante / 60)|round|int }}h</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-success" onclick="atualizarPendencia({{ pendencia.id }}, 'concluida')">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning" onclick="atualizarPendencia({{ pendencia.id }}, 'em_andamento')">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Registros do Plantão -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-history me-2"></i>Registros do Plantão
+                </h3>
+            </div>
+            <div class="card-body">
+                {% if registros_plantao %}
+                <div class="timeline">
+                    {% for registro in registros_plantao[:10] %}
+                    <div>
+                        <i class="fas fa-{{ 'exclamation-triangle' if registro.prioridade == 'crítica' else 'file-medical' }} bg-{{ 'danger' if registro.prioridade == 'crítica' else 'info' }}"></i>
+                        <div class="timeline-item">
+                            <span class="time"><i class="fas fa-clock"></i> {{ registro.criado_em.strftime('%H:%M') }}</span>
+                            <h3 class="timeline-header">{{ registro.titulo }}</h3>
+                            <div class="timeline-body">
+                                <span class="badge bg-{{ 'danger' if registro.prioridade == 'crítica' else 'info' }}">
+                                    {{ registro.prioridade.title() }}
+                                </span>
+                                <span class="badge bg-secondary">{{ registro.categoria.title() }}</span>
+                                <br>
+                                {{ registro.descricao_rica[:100] }}...
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div>
+                        <i class="fas fa-clock bg-gray"></i>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clipboard fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nenhum registro criado</h5>
+                    <p class="text-muted">Crie registros para documentar as ocorrências do plantão</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Encerramento -->
+<div class="modal fade" id="modalEncerramento" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-flag-checkered me-2"></i>Encerramento do Plantão
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('encerrar_plantao') }}">
+                <input type="hidden" name="plantao_id" value="{{ plantao_ativo.id }}">
+                <div class="modal-body">
+                    {% if plantao_ativo.usuario_id != current_user.id %}
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Encerrando Plantão de Outro Usuário</h6>
+                        <p class="mb-0">Você está encerrando o plantão de <strong>{{ plantao_ativo.usuario.nome }}</strong>. Esta ação será registrada na auditoria.</p>
+                    </div>
+                    {% endif %}
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Checklist de Saída</h6>
+                        <p class="mb-0">Marque todos os itens obrigatórios antes de encerrar o plantão:</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="registros_criticos_revisados" name="registros_criticos_revisados" required>
+                            <label class="form-check-label" for="registros_criticos_revisados">
+                                <strong>Registros críticos revisados</strong>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="pendencias_com_responsavel" name="pendencias_com_responsavel" required>
+                            <label class="form-check-label" for="pendencias_com_responsavel">
+                                <strong>Pendências com responsável e prazo definidos</strong>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="equipamentos_reportados" name="equipamentos_reportados" required>
+                            <label class="form-check-label" for="equipamentos_reportados">
+                                <strong>Equipamentos com defeito reportados</strong>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="comunicacao_familia" name="comunicacao_familia" required>
+                            <label class="form-check-label" for="comunicacao_familia">
+                                <strong>Comunicação com a equipe realizada/documentada</strong>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="chaves_entregues" name="chaves_entregues" required>
+                            <label class="form-check-label" for="chaves_entregues">
+                                <strong>Documentos e objetos entregues</strong>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="sistemas_desconectados" name="sistemas_desconectados" required>
+                            <label class="form-check-label" for="sistemas_desconectados">
+                                <strong>Sistemas/telefonias conectados e funcionando</strong>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="observacoes_finais">Observações Finais</label>
+                        <textarea class="form-control" id="observacoes_finais" name="observacoes_finais" rows="3" placeholder="Observações importantes para o próximo plantão..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-flag-checkered me-2"></i>Encerrar Plantão
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function prepararEncerramento() {
+    const modal = new bootstrap.Modal(document.getElementById('modalEncerramento'));
+    modal.show();
+}
+
+function atualizarPendencia(pendenciaId, status) {
+    if (confirm('Confirmar alteração de status?')) {
+        fetch(`/pendencias/${pendenciaId}/atualizar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `status=${status}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao atualizar pendência');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao atualizar pendência');
+        });
+    }
+}
+
+$(document).ready(function() {
+    // Auto-refresh a cada 30 segundos
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+});
+</script>
+{% endblock %} 

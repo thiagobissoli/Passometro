@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - Passômetro{% endblock %}
+{% block page_title %}
+Relatórios
+{% if not is_gestor %}
+<span class="badge bg-warning ms-2">Posto</span>
+{% endif %}
+{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Relatórios</li>
+{% endblock %}
+
+{% block content %}
+<!-- KPIs Principais -->
+<div class="row">
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3>{{ total_plantoes }}</h3>
+                <p>Plantões Realizados{% if not is_gestor %} (Posto){% endif %}</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <a href="{{ url_for('relatorios') }}#plantoes" class="small-box-footer">
+                Mais informações <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+            <div class="inner">
+                <h3>{{ total_registros }}</h3>
+                <p>Registros Criados{% if not is_gestor %} (Posto){% endif %}</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <a href="{{ url_for('registros') }}" class="small-box-footer">
+                Mais informações <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+            <div class="inner">
+                <h3>{{ pendencias_abertas }}</h3>
+                <p>Pendências Abertas{% if not is_gestor %} (Posto){% endif %}</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <a href="{{ url_for('pendencias') }}" class="small-box-footer">
+                Mais informações <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+            <div class="inner">
+                <h3>{{ sla_vencidos }}</h3>
+                <p>SLA Vencidos{% if not is_gestor %} (Posto){% endif %}</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <a href="{{ url_for('relatorios') }}#sla" class="small-box-footer">
+                Mais informações <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-pie me-2"></i>Registros por Tipo
+                </h3>
+            </div>
+            <div class="card-body">
+                <canvas id="registrosPorTipo" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-bar me-2"></i>Pendências por Status
+                </h3>
+            </div>
+            <div class="card-body">
+                <canvas id="pendenciasPorStatus" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Relatórios Detalhados -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-file-alt me-2"></i>Relatórios Disponíveis
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card card-outline card-primary">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="fas fa-calendar-day me-2"></i>Relatório Diário
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">Resumo das atividades do dia, incluindo registros, pendências e SLA.</p>
+                                <form method="POST" action="{{ url_for('gerar_relatorio') }}" onsubmit="return validarFormularioRelatorio(this)">
+                                    <input type="hidden" name="tipo" value="diario">
+                                    <input type="date" name="data" class="form-control mb-2" value="{{ hoje }}" required>
+                                    <button type="submit" class="btn btn-primary w-100" id="btn-diario">
+                                        <i class="fas fa-download me-2"></i>Gerar Relatório
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card card-outline card-success">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="fas fa-calendar-week me-2"></i>Relatório Semanal
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">Análise semanal com tendências, KPIs e comparações.</p>
+                                <form method="POST" action="{{ url_for('gerar_relatorio') }}" onsubmit="return validarFormularioRelatorio(this)">
+                                    <input type="hidden" name="tipo" value="semanal">
+                                    <input type="date" name="data_semana" class="form-control mb-2" value="{{ hoje }}" required>
+                                    <input type="hidden" name="semana" id="semana_hidden">
+                                    <button type="submit" class="btn btn-success w-100" id="btn-semanal">
+                                        <i class="fas fa-download me-2"></i>Gerar Relatório
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card card-outline card-info">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="fas fa-calendar-alt me-2"></i>Relatório Mensal
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">Relatório mensal completo com análises e métricas.</p>
+                                <form method="POST" action="{{ url_for('gerar_relatorio') }}" onsubmit="return validarFormularioRelatorio(this)">
+                                    <input type="hidden" name="tipo" value="mensal">
+                                    <input type="month" name="mes" class="form-control mb-2" value="{{ mes_atual }}" required>
+                                    <button type="submit" class="btn btn-info w-100" id="btn-mensal">
+                                        <i class="fas fa-download me-2"></i>Gerar Relatório
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Plantões Recentes -->
+<div class="row" id="plantoes">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-history me-2"></i>Plantões Recentes
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Posto</th>
+                                <th>Profissional</th>
+                                <th>Registros</th>
+                                <th>Pendências</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plantao in plantoes_recentes %}
+                            <tr>
+                                <td>{{ plantao.data_inicio.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ plantao.posto.nome }}</td>
+                                <td>{{ plantao.usuario.nome }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ plantao.registros|length }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning">{{ plantao.pendencias|length }}</span>
+                                </td>
+                                <td>
+                                    {% if plantao.status == 'aberto' %}
+                                        <span class="badge bg-success">Em Andamento</span>
+                                    {% elif plantao.status == 'fechado' %}
+                                        <span class="badge bg-secondary">Encerrado</span>
+                                    {% else %}
+                                        <span class="badge bg-info">{{ plantao.status.title() }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('relatorio_plantao', plantao_id=plantao.id) }}" 
+                                           class="btn btn-outline-info" 
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-placement="top" 
+                                           title="Ver Relatório Detalhado">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if plantao.status == 'aberto' %}
+                                        <a href="{{ url_for('passagem') }}" 
+                                           class="btn btn-outline-warning" 
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-placement="top" 
+                                           title="Gerenciar Plantão Ativo">
+                                            <i class="fas fa-cog"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Métricas de SLA -->
+<div class="row" id="sla">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tachometer-alt me-2"></i>Métricas de SLA
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="info-box bg-success">
+                            <span class="info-box-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Dentro do SLA</span>
+                                <span class="info-box-number">{{ sla_dentro_prazo }}</span>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: {{ (sla_dentro_prazo / total_pendencias * 100) if total_pendencias > 0 else 0 }}%"></div>
+                                </div>
+                                <span class="progress-description">
+                                    {{ "%.1f"|format(sla_dentro_prazo / total_pendencias * 100) if total_pendencias > 0 else 0 }}% do total
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="info-box bg-warning">
+                            <span class="info-box-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Próximo do Vencimento</span>
+                                <span class="info-box-number">{{ sla_proximo_vencimento }}</span>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: {{ (sla_proximo_vencimento / total_pendencias * 100) if total_pendencias > 0 else 0 }}%"></div>
+                                </div>
+                                <span class="progress-description">
+                                    {{ "%.1f"|format(sla_proximo_vencimento / total_pendencias * 100) if total_pendencias > 0 else 0 }}% do total
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="info-box bg-danger">
+                            <span class="info-box-icon">
+                                <i class="fas fa-times-circle"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">SLA Vencido</span>
+                                <span class="info-box-number">{{ sla_vencidos }}</span>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: {{ (sla_vencidos / total_pendencias * 100) if total_pendencias > 0 else 0 }}%"></div>
+                                </div>
+                                <span class="progress-description">
+                                    {{ "%.1f"|format(sla_vencidos / total_pendencias * 100) if total_pendencias > 0 else 0 }}% do total
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="info-box bg-info">
+                            <span class="info-box-icon">
+                                <i class="fas fa-clock"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Tempo Médio</span>
+                                <span class="info-box-number">{{ "%.1f"|format(tempo_medio_resolucao) }}h</span>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: 100%"></div>
+                                </div>
+                                <span class="progress-description">
+                                    Tempo médio de resolução
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Funções para melhorar a experiência do usuário
+function validarFormularioRelatorio(form) {
+    const tipo = form.querySelector('input[name="tipo"]').value;
+    const data = form.querySelector('input[name="data"]');
+    const dataSemana = form.querySelector('input[name="data_semana"]');
+    const semanaHidden = form.querySelector('input[name="semana"]');
+    const mes = form.querySelector('input[name="mes"]');
+    
+    let dataValida = false;
+    
+    if (tipo === 'diario' && data && data.value) {
+        dataValida = true;
+    } else if (tipo === 'semanal' && dataSemana && dataSemana.value) {
+        // Converter data para formato de semana
+        const dataObj = new Date(dataSemana.value);
+        const inicioSemana = new Date(dataObj);
+        inicioSemana.setDate(dataObj.getDate() - dataObj.getDay() + 1); // Segunda-feira
+        
+        const ano = inicioSemana.getFullYear();
+        const semanaNum = Math.ceil((inicioSemana - new Date(ano, 0, 1)) / (7 * 24 * 60 * 60 * 1000));
+        const semanaFormatada = `${ano}-W${semanaNum.toString().padStart(2, '0')}`;
+        
+        semanaHidden.value = semanaFormatada;
+        dataValida = true;
+    } else if (tipo === 'mensal' && mes && mes.value) {
+        dataValida = true;
+    }
+    
+    if (!dataValida) {
+        alert('Por favor, selecione uma data válida para o relatório.');
+        return false;
+    }
+    
+    // Mostrar indicador de carregamento
+    const button = form.querySelector('button[type="submit"]');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando...';
+    
+    // Desabilitar temporariamente para evitar múltiplos cliques
+    button.disabled = true;
+    
+    // Reabilitar o botão após 5 segundos se não houver resposta
+    setTimeout(() => {
+        if (button.disabled) {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    }, 5000);
+    
+    // Permitir que o formulário seja enviado
+    return true;
+}
+
+function confirmarGeracaoRelatorio(tipo) {
+    return confirm(`Deseja gerar o relatório ${tipo}?`);
+}
+
+// Adicionar tooltips aos botões
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Reabilitar todos os botões de relatório ao carregar a página
+    const botoesRelatorio = document.querySelectorAll('#btn-diario, #btn-semanal, #btn-mensal');
+    botoesRelatorio.forEach(button => {
+        if (button.disabled) {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-download me-2"></i>Gerar Relatório';
+        }
+    });
+});
+</script>
+<script>
+$(document).ready(function() {
+    // Gráfico de Registros por Tipo
+    const ctxRegistros = document.getElementById('registrosPorTipo').getContext('2d');
+    new Chart(ctxRegistros, {
+        type: 'doughnut',
+        data: {
+            labels: ['Eventos', 'Ocorrências', 'Comunicados', 'Alertas'],
+            datasets: [{
+                data: [{{ registros_por_tipo.evento }}, {{ registros_por_tipo.ocorrencia }}, {{ registros_por_tipo.comunicado }}, {{ registros_por_tipo.alerta }}],
+                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Gráfico de Pendências por Status
+    const ctxPendencias = document.getElementById('pendenciasPorStatus').getContext('2d');
+    new Chart(ctxPendencias, {
+        type: 'bar',
+        data: {
+            labels: ['Abertas', 'Em Andamento', 'Bloqueadas', 'Concluídas'],
+            datasets: [{
+                label: 'Quantidade',
+                data: [{{ pendencias_por_status.aberta }}, {{ pendencias_por_status.em_andamento }}, {{ pendencias_por_status.bloqueada }}, {{ pendencias_por_status.concluida }}],
+                backgroundColor: ['#ffc107', '#17a2b8', '#6c757d', '#28a745'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %} 

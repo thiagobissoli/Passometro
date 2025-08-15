@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Visualizar Pendência - Passômetro{% endblock %}
+{% block page_title %}Detalhes da Pendência{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('pendencias') }}">Pendências</a></li>
+<li class="breadcrumb-item active">Visualizar</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tasks me-2"></i>{{ pendencia.descricao[:50] }}...
+                </h3>
+                <div class="card-tools">
+                    <span class="badge bg-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' if pendencia.prioridade == 'alta' else 'info' }}">
+                        {{ pendencia.prioridade.title() }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-info-circle me-2"></i>Informações Básicas</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td>
+                                    <span class="badge bg-{{ 'warning' if pendencia.status == 'aberta' else 'info' if pendencia.status == 'em_andamento' else 'secondary' if pendencia.status == 'bloqueada' else 'success' }}">
+                                        {{ pendencia.status.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Responsável:</strong></td>
+                                <td>{{ pendencia.responsavel.nome }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Prazo:</strong></td>
+                                <td>{{ pendencia.prazo.strftime('%d/%m/%Y às %H:%M') }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>SLA:</strong></td>
+                                <td>{{ pendencia.sla_minutos }} minutos</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Criada em:</strong></td>
+                                <td>{{ pendencia.criado_em.strftime('%d/%m/%Y às %H:%M') }}</td>
+                            </tr>
+                            {% if pendencia.atualizado_em %}
+                            <tr>
+                                <td><strong>Atualizada em:</strong></td>
+                                <td>{{ pendencia.atualizado_em.strftime('%d/%m/%Y às %H:%M') }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-file-medical me-2"></i>Registro Relacionado</h6>
+                        <div class="card card-outline card-primary">
+                            <div class="card-header">
+                                <h6 class="card-title">{{ pendencia.registro.titulo }}</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-2"><strong>Tipo:</strong> {{ pendencia.registro.tipo.title() }}</p>
+                                <p class="mb-2"><strong>Categoria:</strong> {{ pendencia.registro.categoria.title() }}</p>
+                                <p class="mb-2"><strong>Prioridade:</strong> 
+                                    <span class="badge bg-{{ 'danger' if pendencia.registro.prioridade == 'critica' else 'warning' if pendencia.registro.prioridade == 'alta' else 'info' }}">
+                                        {{ pendencia.registro.prioridade.title() }}
+                                    </span>
+                                </p>
+                                <a href="{{ url_for('visualizar_registro', registro_id=pendencia.registro.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye me-1"></i>Ver Registro
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6><i class="fas fa-align-left me-2"></i>Descrição Completa</h6>
+                <div class="alert alert-light">
+                    {{ pendencia.descricao }}
+                </div>
+
+                {% if pendencia.motivo_bloqueio %}
+                <h6><i class="fas fa-exclamation-triangle me-2"></i>Motivo do Bloqueio</h6>
+                <div class="alert alert-warning">
+                    {{ pendencia.motivo_bloqueio }}
+                </div>
+                {% endif %}
+
+                <!-- Ações -->
+                <div class="mt-4">
+                    <h6><i class="fas fa-cogs me-2"></i>Ações</h6>
+                    <div class="btn-group">
+                        {% if pendencia.status == 'aberta' %}
+                        <button class="btn btn-info" onclick="atualizarStatus({{ pendencia.id }}, 'em_andamento')">
+                            <i class="fas fa-play me-1"></i>Iniciar
+                        </button>
+                        {% endif %}
+                        
+                        {% if pendencia.status == 'em_andamento' %}
+                        <button class="btn btn-success" onclick="atualizarStatus({{ pendencia.id }}, 'concluida')">
+                            <i class="fas fa-check me-1"></i>Concluir
+                        </button>
+                        {% endif %}
+                        
+                        {% if pendencia.status in ['aberta', 'em_andamento'] %}
+                        <button class="btn btn-secondary" onclick="bloquearPendencia({{ pendencia.id }})">
+                            <i class="fas fa-pause me-1"></i>Bloquear
+                        </button>
+                        {% endif %}
+                        
+                        {% if pendencia.status == 'bloqueada' %}
+                        <button class="btn btn-warning" onclick="atualizarStatus({{ pendencia.id }}, 'aberta')">
+                            <i class="fas fa-play me-1"></i>Desbloquear
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-clock me-2"></i>Tempo Restante
+                </h3>
+            </div>
+            <div class="card-body">
+                {% set tempo_restante = (pendencia.prazo - now).total_seconds() %}
+                {% if tempo_restante > 0 %}
+                    {% set horas = (tempo_restante // 3600)|int %}
+                    {% set minutos = ((tempo_restante % 3600) // 60)|int %}
+                    <div class="text-center">
+                        <h4 class="text-{{ 'danger' if tempo_restante < 3600 else 'warning' if tempo_restante < 7200 else 'success' }}">
+                            {{ horas }}h {{ minutos }}min
+                        </h4>
+                        <small class="text-muted">Restantes até o prazo</small>
+                    </div>
+                {% else %}
+                    <div class="text-center">
+                        <h4 class="text-danger">
+                            <i class="fas fa-exclamation-triangle"></i> Vencida
+                        </h4>
+                        <small class="text-muted">Prazo expirado há {{ ((now - pendencia.prazo).total_seconds() / 3600)|round(1) }} horas</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-history me-2"></i>Histórico
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="time-label">
+                        <span class="bg-primary">{{ pendencia.criado_em.strftime('%d/%m/%Y') }}</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-plus bg-green"></i>
+                        <div class="timeline-item">
+                            <span class="time"><i class="fas fa-clock"></i> {{ pendencia.criado_em.strftime('%H:%M') }}</span>
+                            <h3 class="timeline-header">Pendência criada</h3>
+                            <div class="timeline-body">
+                                Criada por {{ pendencia.responsavel.nome }}
+                            </div>
+                        </div>
+                    </div>
+                    {% if pendencia.atualizado_em and pendencia.atualizado_em != pendencia.criado_em %}
+                    <div>
+                        <i class="fas fa-edit bg-blue"></i>
+                        <div class="timeline-item">
+                            <span class="time"><i class="fas fa-clock"></i> {{ pendencia.atualizado_em.strftime('%H:%M') }}</span>
+                            <h3 class="timeline-header">Status atualizado</h3>
+                            <div class="timeline-body">
+                                Status alterado para {{ pendencia.status.replace('_', ' ').title() }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function atualizarStatus(pendenciaId, status) {
+    if (confirm('Tem certeza que deseja alterar o status desta pendência?')) {
+        fetch(`/pendencias/${pendenciaId}/atualizar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `status=${status}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Status atualizado com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao atualizar status');
+        });
+    }
+}
+
+function bloquearPendencia(pendenciaId) {
+    const motivo = prompt('Motivo do bloqueio:');
+    if (motivo !== null) {
+        fetch(`/pendencias/${pendenciaId}/atualizar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `status=bloqueada&motivo_bloqueio=${encodeURIComponent(motivo)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Pendência bloqueada com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao bloquear pendência');
+        });
+    }
+}
+</script>
+{% endblock %} 

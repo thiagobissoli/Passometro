@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Visualizar Registro - Passômetro{% endblock %}
+{% block page_title %}Visualizar Registro{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('registros') }}">Registros</a></li>
+<li class="breadcrumb-item active">{{ registro.titulo[:30] }}...</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-file-medical mr-2"></i>{{ registro.titulo }}
+                </h3>
+                <div class="card-tools">
+                    <span class="badge badge-{{ 'danger' if registro.prioridade == 'crítica' else 'warning' if registro.prioridade == 'alta' else 'info' if registro.prioridade == 'média' else 'success' }}">
+                        {{ registro.prioridade.title() }}
+                    </span>
+                    {% if registro.confidencial %}
+                        <i class="fas fa-lock text-warning ml-2" title="Confidencial"></i>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5>Descrição</h5>
+                        <div class="border rounded p-3 bg-light">
+                            {{ registro.descricao_rica|safe }}
+                        </div>
+                        
+                        {% if registro.situacao or registro.background or registro.avaliacao or registro.recomendacao %}
+                        <div class="mt-4">
+                            <h5>Dados SBAR</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Situação:</strong>
+                                    <p>{{ registro.situacao or 'Não informado' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Background:</strong>
+                                    <p>{{ registro.background or 'Não informado' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Avaliação:</strong>
+                                    <p>{{ registro.avaliacao or 'Não informado' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Recomendação:</strong>
+                                    <p>{{ registro.recomendacao or 'Não informado' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if registro.illness_severity or registro.patient_summary or registro.action_list or registro.situation_awareness or registro.synthesis_by_receiver %}
+                        <div class="mt-4">
+                            <h5>Dados I-PASS</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Illness Severity:</strong>
+                                    <p>{{ registro.illness_severity or 'Não informado' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Patient Summary:</strong>
+                                    <p>{{ registro.patient_summary or 'Não informado' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Action List:</strong>
+                                    <p>{{ registro.action_list or 'Não informado' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Situation Awareness:</strong>
+                                    <p>{{ registro.situation_awareness or 'Não informado' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Synthesis by Receiver:</strong>
+                                    <p>{{ registro.synthesis_by_receiver or 'Não informado' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="fas fa-info-circle mr-2"></i>Informações
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Tipo:</strong></td>
+                                        <td>
+                                            <span class="badge badge-{{ 'danger' if registro.tipo == 'alerta' else 'info' }}">
+                                                {{ registro.tipo.title() }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Categoria:</strong></td>
+                                        <td>{{ registro.categoria.title() }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Prioridade:</strong></td>
+                                        <td>
+                                            <span class="badge badge-{{ 'danger' if registro.prioridade == 'crítica' else 'warning' if registro.prioridade == 'alta' else 'info' if registro.prioridade == 'média' else 'success' }}">
+                                                {{ registro.prioridade.title() }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Criado por:</strong></td>
+                                        <td>{{ registro.criador.nome }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Criado em:</strong></td>
+                                        <td>{{ registro.criado_em.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    </tr>
+                                    {% if registro.atualizado_em and registro.atualizado_em != registro.criado_em %}
+                                    <tr>
+                                        <td><strong>Atualizado em:</strong></td>
+                                        <td>{{ registro.atualizado_em.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    </tr>
+                                    {% if registro.atualizador %}
+                                    <tr>
+                                        <td><strong>Atualizado por:</strong></td>
+                                        <td>{{ registro.atualizador.nome }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endif %}
+                                    <tr>
+                                        <td><strong>Plantão:</strong></td>
+                                        <td>{{ registro.plantao.posto.nome }}</td>
+                                    </tr>
+                                    {% if registro.confidencial %}
+                                    <tr>
+                                        <td><strong>Confidencial:</strong></td>
+                                        <td><i class="fas fa-lock text-warning"></i> Sim</td>
+                                    </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+                        </div>
+                        
+                        {% if registro.tags %}
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="fas fa-tags mr-2"></i>Tags
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                {% for tag in registro.tags %}
+                                    <span class="badge badge-secondary mr-1">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="fas fa-tasks mr-2"></i>Pendências
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                {% set pendencias_registro = registro.pendencias %}
+                                {% if pendencias_registro %}
+                                    <div class="list-group list-group-flush">
+                                        {% for pendencia in pendencias_registro %}
+                                        <div class="list-group-item p-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <small class="text-muted">{{ pendencia.descricao[:50] }}...</small>
+                                                    <br>
+                                                    <span class="badge badge-{{ 'danger' if pendencia.prioridade == 'crítica' else 'warning' if pendencia.prioridade == 'alta' else 'info' }}">
+                                                        {{ pendencia.prioridade.title() }}
+                                                    </span>
+                                                </div>
+                                                <span class="badge badge-{{ 'success' if pendencia.status == 'concluida' else 'warning' if pendencia.status == 'em_andamento' else 'secondary' if pendencia.status == 'bloqueada' else 'info' }}">
+                                                    {{ pendencia.status.title() }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted mb-0">Nenhuma pendência associada</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="fas fa-history mr-2"></i>Histórico de Alterações
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="timeline">
+                                    <div>
+                                        <i class="fas fa-plus bg-info"></i>
+                                        <div class="timeline-item">
+                                            <span class="time">{{ registro.criado_em.strftime('%H:%M') }}</span>
+                                            <h3 class="timeline-header">Registro criado</h3>
+                                            <div class="timeline-body">
+                                                Criado por {{ registro.criador.nome }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if registro.atualizado_em and registro.atualizado_em != registro.criado_em %}
+                                    <div>
+                                        <i class="fas fa-edit bg-warning"></i>
+                                        <div class="timeline-item">
+                                            <span class="time">{{ registro.atualizado_em.strftime('%H:%M') }}</span>
+                                            <h3 class="timeline-header">Registro editado</h3>
+                                            <div class="timeline-body">
+                                                {% if registro.atualizador %}
+                                                Editado por {{ registro.atualizador.nome }}
+                                                {% else %}
+                                                Editado
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <i class="fas fa-clock bg-gray"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="btn-group">
+                    <a href="{{ url_for('registros') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left mr-2"></i>Voltar
+                    </a>
+                    {% if registro.criador.id == current_user.id or current_user.tem_perfil('gestor') %}
+                    <a href="{{ url_for('editar_registro', registro_id=registro.id) }}" class="btn btn-warning">
+                        <i class="fas fa-edit mr-2"></i>Editar
+                    </a>
+                    {% endif %}
+                    <a href="#" class="btn btn-info" onclick="window.print()">
+                        <i class="fas fa-print mr-2"></i>Imprimir
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

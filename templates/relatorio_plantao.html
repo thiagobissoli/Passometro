@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório do Plantão - Passômetro{% endblock %}
+{% block page_title %}Relatório do Plantão{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('relatorios') }}">Relatórios</a></li>
+<li class="breadcrumb-item active">Plantão #{{ plantao.id }}</li>
+{% endblock %}
+
+{% block content %}
+<!-- Informações do Plantão -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-calendar-alt me-2"></i>Informações do Plantão
+                </h3>
+                <div class="card-tools">
+                    <button class="btn btn-primary btn-sm" onclick="imprimirRelatorio()">
+                        <i class="fas fa-print me-1"></i>Imprimir
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="exportarPDF()">
+                        <i class="fas fa-file-pdf me-1"></i>Exportar PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Posto:</strong></td>
+                                <td>{{ plantao.posto.nome }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Profissional:</strong></td>
+                                <td>{{ plantao.usuario.nome }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Data de Início:</strong></td>
+                                <td>{{ plantao.data_inicio.strftime('%d/%m/%Y às %H:%M') }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Data de Fim:</strong></td>
+                                <td>{{ plantao.data_fim.strftime('%d/%m/%Y às %H:%M') if plantao.data_fim else 'Em andamento' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td>
+                                    {% if plantao.status == 'aberto' %}
+                                        <span class="badge bg-success">Em Andamento</span>
+                                    {% elif plantao.status == 'fechado' %}
+                                        <span class="badge bg-secondary">Encerrado</span>
+                                    {% else %}
+                                        <span class="badge bg-info">{{ plantao.status.title() }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total de Registros:</strong></td>
+                                <td><span class="badge bg-info">{{ registros|length }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Pendências:</strong></td>
+                                <td><span class="badge bg-warning">{{ pendencias|length }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Duração:</strong></td>
+                                <td>
+                                    {% if plantao.data_fim %}
+                                        {{ ((plantao.data_fim - plantao.data_inicio).total_seconds() / 3600)|round(1) }} horas
+                                    {% else %}
+                                        Em andamento
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Registros do Plantão -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-clipboard-list me-2"></i>Registros Realizados
+                </h3>
+            </div>
+            <div class="card-body">
+                {% if registros %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Horário</th>
+                                <th>Tipo</th>
+                                <th>Título</th>
+                                <th>Prioridade</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for registro in registros %}
+                            <tr>
+                                <td>{{ registro.criado_em.strftime('%H:%M') }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'primary' if registro.tipo == 'evento' else 'success' if registro.tipo == 'ocorrencia' else 'warning' if registro.tipo == 'comunicado' else 'danger' }}">
+                                        {{ registro.tipo.title() }}
+                                    </span>
+                                </td>
+                                <td>{{ registro.titulo }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if registro.prioridade == 'critica' else 'warning' if registro.prioridade == 'alta' else 'info' if registro.prioridade == 'media' else 'secondary' }}">
+                                        {{ registro.prioridade.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if registro.urgente %}
+                                        <span class="badge bg-danger">Urgente</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Normal</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('visualizar_registro', registro_id=registro.id) }}" 
+                                       class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                    <p>Nenhum registro foi criado neste plantão.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pendências do Plantão -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tasks me-2"></i>Pendências Relacionadas
+                </h3>
+            </div>
+            <div class="card-body">
+                {% if pendencias %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Descrição</th>
+                                <th>Responsável</th>
+                                <th>Prioridade</th>
+                                <th>Status</th>
+                                <th>Prazo</th>
+                                <th>SLA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pendencia in pendencias %}
+                            <tr>
+                                <td>{{ pendencia.descricao[:50] }}{% if pendencia.descricao|length > 50 %}...{% endif %}</td>
+                                <td>{{ pendencia.responsavel.nome if pendencia.responsavel else 'Não definido' }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' if pendencia.prioridade == 'alta' else 'info' if pendencia.prioridade == 'media' else 'secondary' }}">
+                                        {{ pendencia.prioridade.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'warning' if pendencia.status == 'aberta' else 'info' if pendencia.status == 'em_andamento' else 'secondary' if pendencia.status == 'bloqueada' else 'success' }}">
+                                        {{ pendencia.status.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td>{{ pendencia.prazo.strftime('%d/%m/%Y %H:%M') if pendencia.prazo else 'Não definido' }}</td>
+                                <td>
+                                    {% if pendencia.prazo %}
+                                        {% set tempo_restante = (pendencia.prazo - now).total_seconds() / 3600 %}
+                                        {% if tempo_restante < 0 %}
+                                            <span class="badge bg-danger">Vencido</span>
+                                        {% elif tempo_restante < 1 %}
+                                            <span class="badge bg-warning">Crítico</span>
+                                        {% elif tempo_restante < 4 %}
+                                            <span class="badge bg-info">Atenção</span>
+                                        {% else %}
+                                            <span class="badge bg-success">OK</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">N/A</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-tasks fa-3x mb-3"></i>
+                    <p>Nenhuma pendência foi criada neste plantão.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumo Executivo -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-line me-2"></i>Resumo Executivo
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="info-box bg-info">
+                            <span class="info-box-icon">
+                                <i class="fas fa-clipboard-list"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Total de Registros</span>
+                                <span class="info-box-number">{{ registros|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="info-box bg-warning">
+                            <span class="info-box-icon">
+                                <i class="fas fa-tasks"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Pendências</span>
+                                <span class="info-box-number">{{ pendencias|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="info-box bg-danger">
+                            <span class="info-box-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Urgentes</span>
+                                <span class="info-box-number">{{ registros|selectattr('urgente', 'equalto', True)|list|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="info-box bg-success">
+                            <span class="info-box-icon">
+                                <i class="fas fa-clock"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Duração</span>
+                                <span class="info-box-number">
+                                    {% if plantao.data_fim %}
+                                        {{ ((plantao.data_fim - plantao.data_inicio).total_seconds() / 3600)|round(1) }}h
+                                    {% else %}
+                                        Em andamento
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportarPDF() {
+    // Implementar exportação para PDF
+    alert('Funcionalidade de exportação para PDF será implementada em breve!');
+}
+
+function imprimirRelatorio() {
+    // Configurar impressão
+    window.print();
+}
+</script>
+{% endblock %} 

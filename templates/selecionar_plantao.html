@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Selecionar Plantão - Passômetro{% endblock %}
+{% block page_title %}Selecionar Plantão Ativo{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+<li class="breadcrumb-item active">Selecionar Plantão</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5 class="alert-heading">
+                <i class="fas fa-info-circle me-2"></i>Seleção de Plantão
+            </h5>
+            <p class="mb-0">
+                Você não possui um plantão ativo. Selecione um dos plantões ativos abaixo para visualizar a passagem de plantão ou inicie um novo plantão.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-calendar-alt me-2"></i>Plantões Ativos Disponíveis
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>{{ plantoes_ativos|length }} plantão(ões) ativo(s)</strong> encontrado(s) no sistema.
+                            Você pode visualizar qualquer um deles ou iniciar seu próprio plantão.
+                        </div>
+                    </div>
+                    {% for plantao in plantoes_ativos %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card card-outline card-primary">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="fas fa-user-md me-2"></i>{{ plantao.usuario.nome }}
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Posto:</strong><br>
+                                        <span class="badge bg-info">{{ plantao.posto.nome }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Início:</strong><br>
+                                        <small>{{ plantao.data_inicio.strftime('%d/%m %H:%M') }}</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-6">
+                                        <strong>Duração:</strong><br>
+                                        <span class="text-primary">
+                                            {{ ((now - plantao.data_inicio).total_seconds() / 3600)|round(1) }}h
+                                        </span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Registros:</strong><br>
+                                        <span class="badge bg-success">{{ plantao.registros|length }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <div class="d-grid gap-2">
+                                        <a href="{{ url_for('passagem') }}?plantao_id={{ plantao.id }}" 
+                                           class="btn btn-primary">
+                                            <i class="fas fa-eye me-2"></i>Visualizar Plantão
+                                        </a>
+                                        {% if plantao.observacoes %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-sticky-note me-1"></i>
+                                            {{ plantao.observacoes[:50] }}{% if plantao.observacoes|length > 50 %}...{% endif %}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if not plantoes_ativos %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                    <h5>Nenhum plantão ativo encontrado</h5>
+                    <p>Não há plantões em andamento no momento.</p>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Voltar ao Dashboard
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-plus me-2"></i>Iniciar Novo Plantão
+                </h3>
+            </div>
+            <div class="card-body">
+                <p>Se você deseja iniciar um novo plantão, clique no botão abaixo:</p>
+                <a href="{{ url_for('iniciar_plantao') }}" class="btn btn-success">
+                    <i class="fas fa-play me-2"></i>Iniciar Novo Plantão
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+ 

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar Plantão - Passômetro{% endblock %}
+{% block page_title %}Iniciar Novo Plantão{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('passagem') }}">Passagem</a></li>
+<li class="breadcrumb-item active">Iniciar Plantão</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5 class="alert-heading">
+                <i class="fas fa-info-circle me-2"></i>Iniciar Novo Plantão
+            </h5>
+            <p class="mb-0">
+                Preencha as informações abaixo para iniciar um novo plantão. Certifique-se de que não há plantões ativos em andamento.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-play me-2"></i>Dados do Plantão
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('iniciar_plantao') }}">
+                    <div class="form-group mb-3">
+                        <label for="posto_id" class="form-label">
+                            <i class="fas fa-hospital me-2"></i>Posto de Trabalho *
+                        </label>
+                        <select class="form-select" id="posto_id" name="posto_id" required>
+                            <option value="">Selecione um posto...</option>
+                            {% for posto in postos %}
+                            <option value="{{ posto.id }}">
+                                {{ posto.nome }} - {{ posto.perfil_minimo.title() }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Escolha o posto onde você irá trabalhar</div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="observacoes" class="form-label">
+                            <i class="fas fa-sticky-note me-2"></i>Observações Iniciais
+                        </label>
+                        <textarea class="form-control" id="observacoes" name="observacoes" 
+                                  rows="4" placeholder="Observações sobre o início do plantão (opcional)..."></textarea>
+                        <div class="form-text">Informações relevantes sobre o início do plantão</div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmacao" required>
+                            <label class="form-check-label" for="confirmacao">
+                                Confirmo que estou iniciando meu plantão e assumindo a responsabilidade pelo posto
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-play me-2"></i>Iniciar Plantão
+                        </button>
+                        <a href="{{ url_for('passagem') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-info-circle me-2"></i>Informações
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="info-box bg-light p-3 rounded mb-3">
+                    <h6><i class="fas fa-user me-2"></i>Usuário</h6>
+                    <p class="mb-0">{{ current_user.nome }}</p>
+                </div>
+
+                <div class="info-box bg-light p-3 rounded mb-3">
+                    <h6><i class="fas fa-clock me-2"></i>Horário de Início</h6>
+                    <p class="mb-0">{{ now.strftime('%d/%m/%Y %H:%M') }}</p>
+                </div>
+
+                <div class="info-box bg-light p-3 rounded mb-3">
+                    <h6><i class="fas fa-tasks me-2"></i>Próximos Passos</h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-check text-success me-2"></i>Selecionar posto</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Iniciar plantão</li>
+                        <li><i class="fas fa-arrow-right text-primary me-2"></i>Fazer registros</li>
+                        <li><i class="fas fa-arrow-right text-primary me-2"></i>Gerenciar pendências</li>
+                        <li><i class="fas fa-arrow-right text-primary me-2"></i>Encerrar plantão</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Importante</h6>
+                    <p class="mb-0 small">
+                        Certifique-se de que não há plantões ativos em andamento antes de iniciar um novo.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validação do formulário
+    const form = document.querySelector('form');
+    const postoSelect = document.getElementById('posto_id');
+    const confirmacaoCheckbox = document.getElementById('confirmacao');
+
+    form.addEventListener('submit', function(e) {
+        if (!postoSelect.value) {
+            e.preventDefault();
+            alert('Por favor, selecione um posto de trabalho.');
+            postoSelect.focus();
+            return false;
+        }
+
+        if (!confirmacaoCheckbox.checked) {
+            e.preventDefault();
+            alert('Por favor, confirme que está assumindo a responsabilidade pelo posto.');
+            confirmacaoCheckbox.focus();
+            return false;
+        }
+
+        // Confirmação final
+        if (!confirm('Tem certeza que deseja iniciar o plantão?')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Melhorar UX do select
+    postoSelect.addEventListener('change', function() {
+        if (this.value) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+        }
+    });
+});
+</script>
+{% endblock %} 

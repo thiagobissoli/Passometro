@@ -1,0 +1,171 @@
+version: '3.8'
+
+services:
+  # Banco de dados MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: passometro_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345678
+      MYSQL_DATABASE: passometro
+      MYSQL_USER: passometro
+      MYSQL_PASSWORD: passometro123
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - passometro_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis para cache e broker do Celery
+  redis:
+    image: redis:7-alpine
+    container_name: passometro_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - passometro_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 20s
+      retries: 10
+
+  # Aplicação principal
+  web:
+    build: .
+    container_name: passometro_web
+    restart: unless-stopped
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - DATABASE_URL=mysql+pymysql://root:12345678@mysql:3306/passometro
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+    ports:
+      - "5001:5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - passometro_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      timeout: 30s
+      retries: 3
+
+  # Worker do Celery
+  celery_worker:
+    build: .
+    container_name: passometro_celery_worker
+    restart: unless-stopped
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=4
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - DATABASE_URL=mysql+pymysql://root:12345678@mysql:3306/passometro
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - passometro_network
+
+  # Beat do Celery (agendador)
+  celery_beat:
+    build: .
+    container_name: passometro_celery_beat
+    restart: unless-stopped
+    command: celery -A celery_app.celery beat --loglevel=info
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - DATABASE_URL=mysql+pymysql://root:12345678@mysql:3306/passometro
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - passometro_network
+
+  # Monitor do Celery (Flower)
+  celery_flower:
+    build: .
+    container_name: passometro_celery_flower
+    restart: unless-stopped
+    command: celery -A celery_app.celery flower --port=5555
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - DATABASE_URL=mysql+pymysql://root:12345678@mysql:3306/passometro
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - passometro_network
+
+  # Nginx como proxy reverso
+  nginx:
+    image: nginx:alpine
+    container_name: passometro_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - web
+    networks:
+      - passometro_network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  passometro_network:
+    driver: bridge 

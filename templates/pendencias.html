@@ -1,0 +1,601 @@
+{% extends "base.html" %}
+
+{% block title %}Pendências - Passômetro{% endblock %}
+{% block page_title %}Pendências{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Pendências</li>
+{% endblock %}
+
+{% block content %}
+<!-- Ações Rápidas -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tasks me-2"></i>Gestão de Pendências
+                </h3>
+                <div class="card-tools">
+                    <a href="{{ url_for('nova_pendencia') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i>Nova Pendência
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="info-box bg-warning">
+                            <span class="info-box-icon">
+                                <i class="fas fa-clock"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Abertas</span>
+                                <span class="info-box-number">{{ pendencias|selectattr('status', 'equalto', 'aberta')|list|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-info">
+                            <span class="info-box-icon">
+                                <i class="fas fa-play"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Em Andamento</span>
+                                <span class="info-box-number">{{ pendencias|selectattr('status', 'equalto', 'em_andamento')|list|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-secondary">
+                            <span class="info-box-icon">
+                                <i class="fas fa-pause"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Bloqueadas</span>
+                                <span class="info-box-number">{{ pendencias|selectattr('status', 'equalto', 'bloqueada')|list|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-success">
+                            <span class="info-box-icon">
+                                <i class="fas fa-check"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Concluídas</span>
+                                <span class="info-box-number">{{ pendencias|selectattr('status', 'equalto', 'concluida')|list|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kanban Board -->
+<div class="row">
+    <!-- Pendências Abertas -->
+    <div class="col-md-3">
+        <div class="card card-warning">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-clock me-2"></i>Abertas
+                </h5>
+                <div class="card-tools">
+                    <span class="badge bg-light">{{ pendencias|selectattr('status', 'equalto', 'aberta')|list|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="kanban-column" data-status="aberta">
+                    {% for pendencia in pendencias %}
+                        {% if pendencia.status == 'aberta' %}
+                        <div class="kanban-item" data-id="{{ pendencia.id }}">
+                            <div class="card card-outline card-warning mb-2">
+                                <div class="card-header p-2">
+                                    <h6 class="card-title mb-0">{{ pendencia.descricao[:50] }}...</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i>{{ pendencia.responsavel.nome }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>{{ pendencia.prazo.strftime('%d/%m %H:%M') }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge bg-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' if pendencia.prioridade == 'alta' else 'info' }}">
+                                            {{ pendencia.prioridade.title() }}
+                                        </span>
+                                    </div>
+                                    <div class="btn-group btn-group-sm w-100">
+                                        <button class="btn btn-outline-success" onclick="moverPendencia({{ pendencia.id }}, 'em_andamento')">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="moverPendencia({{ pendencia.id }}, 'bloqueada')">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info" onclick="visualizarPendencia({{ pendencia.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pendências Em Andamento -->
+    <div class="col-md-3">
+        <div class="card card-info">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-play me-2"></i>Em Andamento
+                </h5>
+                <div class="card-tools">
+                    <span class="badge bg-light">{{ pendencias|selectattr('status', 'equalto', 'em_andamento')|list|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="kanban-column" data-status="em_andamento">
+                    {% for pendencia in pendencias %}
+                        {% if pendencia.status == 'em_andamento' %}
+                        <div class="kanban-item" data-id="{{ pendencia.id }}">
+                            <div class="card card-outline card-info mb-2">
+                                <div class="card-header p-2">
+                                    <h6 class="card-title mb-0">{{ pendencia.descricao[:50] }}...</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i>{{ pendencia.responsavel.nome }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>{{ pendencia.prazo.strftime('%d/%m %H:%M') }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge bg-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' if pendencia.prioridade == 'alta' else 'info' }}">
+                                            {{ pendencia.prioridade.title() }}
+                                        </span>
+                                    </div>
+                                    <div class="btn-group btn-group-sm w-100">
+                                        <button class="btn btn-outline-success" onclick="moverPendencia({{ pendencia.id }}, 'concluida')">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="moverPendencia({{ pendencia.id }}, 'bloqueada')">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info" onclick="visualizarPendencia({{ pendencia.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pendências Bloqueadas -->
+    <div class="col-md-3">
+        <div class="card card-secondary">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-pause me-2"></i>Bloqueadas
+                </h5>
+                <div class="card-tools">
+                    <span class="badge bg-light">{{ pendencias|selectattr('status', 'equalto', 'bloqueada')|list|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="kanban-column" data-status="bloqueada">
+                    {% for pendencia in pendencias %}
+                        {% if pendencia.status == 'bloqueada' %}
+                        <div class="kanban-item" data-id="{{ pendencia.id }}">
+                            <div class="card card-outline card-secondary mb-2">
+                                <div class="card-header p-2">
+                                    <h6 class="card-title mb-0">{{ pendencia.descricao[:50] }}...</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i>{{ pendencia.responsavel.nome }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>{{ pendencia.prazo.strftime('%d/%m %H:%M') }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge bg-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' if pendencia.prioridade == 'alta' else 'info' }}">
+                                            {{ pendencia.prioridade.title() }}
+                                        </span>
+                                    </div>
+                                    <div class="btn-group btn-group-sm w-100">
+                                        <button class="btn btn-outline-info" onclick="moverPendencia({{ pendencia.id }}, 'em_andamento')">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info" onclick="visualizarPendencia({{ pendencia.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pendências Concluídas -->
+    <div class="col-md-3">
+        <div class="card card-success">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-check me-2"></i>Concluídas
+                </h5>
+                <div class="card-tools">
+                    <span class="badge bg-light">{{ pendencias|selectattr('status', 'equalto', 'concluida')|list|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="kanban-column" data-status="concluida">
+                    {% for pendencia in pendencias %}
+                        {% if pendencia.status == 'concluida' %}
+                            {% if loop.index <= 3 %}
+                            <div class="kanban-item" data-id="{{ pendencia.id }}">
+                                <div class="card card-outline card-success mb-2">
+                                    <div class="card-header p-2">
+                                        <h6 class="card-title mb-0">{{ pendencia.descricao[:50] }}...</h6>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i>{{ pendencia.responsavel.nome }}
+                                            </small>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>{{ pendencia.prazo.strftime('%d/%m %H:%M') }}
+                                            </small>
+                                        </div>
+                                        <div class="mb-2">
+                                            <span class="badge bg-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' if pendencia.prioridade == 'alta' else 'info' }}">
+                                                {{ pendencia.prioridade.title() }}
+                                            </span>
+                                        </div>
+                                        <div class="btn-group btn-group-sm w-100">
+                                            <button class="btn btn-outline-info" onclick="visualizarPendencia({{ pendencia.id }})">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% set total_concluidas = pendencias|selectattr('status', 'equalto', 'concluida')|list|length %}
+                    {% if total_concluidas > 3 %}
+                    <div class="text-center mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Mostrando as 3 mais recentes de {{ total_concluidas }} concluídas
+                        </small>
+                        <br>
+                        <a href="#tabelaPendencias" class="btn btn-sm btn-outline-secondary mt-1" onclick="filtrarConcluidas()">
+                            <i class="fas fa-list me-1"></i>Ver todas
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Pendências com Filtros -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-list me-2"></i>Lista de Pendências
+                </h3>
+            </div>
+            <div class="card-body">
+                <!-- Filtros -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="filtroStatus" class="form-label">Status</label>
+                        <select class="form-select" id="filtroStatus">
+                            <option value="">Todos</option>
+                            <option value="aberta">Aberta</option>
+                            <option value="em_andamento">Em Andamento</option>
+                            <option value="bloqueada">Bloqueada</option>
+                            <option value="concluida">Concluída</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filtroPrioridade" class="form-label">Prioridade</label>
+                        <select class="form-select" id="filtroPrioridade">
+                            <option value="">Todas</option>
+                            <option value="critica">Crítica</option>
+                            <option value="alta">Alta</option>
+                            <option value="media">Média</option>
+                            <option value="baixa">Baixa</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filtroResponsavel" class="form-label">Responsável</label>
+                        <select class="form-select" id="filtroResponsavel">
+                            <option value="">Todos</option>
+                            {% for usuario in usuarios %}
+                            <option value="{{ usuario.id }}">{{ usuario.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filtroBusca" class="form-label">Buscar</label>
+                        <input type="text" class="form-control" id="filtroBusca" placeholder="Descrição...">
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <button class="btn btn-primary" onclick="aplicarFiltros()">
+                            <i class="fas fa-filter me-2"></i>Aplicar Filtros
+                        </button>
+                        <button class="btn btn-secondary" onclick="limparFiltros()">
+                            <i class="fas fa-times me-2"></i>Limpar Filtros
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela de Pendências -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="tabelaPendencias">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Descrição</th>
+                                <th>Status</th>
+                                <th>Prioridade</th>
+                                <th>Responsável</th>
+                                <th>Prazo</th>
+                                <th>Criada em</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pendencia in pendencias %}
+                            <tr data-status="{{ pendencia.status }}" data-prioridade="{{ pendencia.prioridade }}" data-responsavel="{{ pendencia.responsavel_id }}" data-descricao="{{ pendencia.descricao.lower() }}">
+                                <td>{{ pendencia.id }}</td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 200px;" title="{{ pendencia.descricao }}">
+                                        {{ pendencia.descricao }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'warning' if pendencia.status == 'aberta' else 'info' if pendencia.status == 'em_andamento' else 'secondary' if pendencia.status == 'bloqueada' else 'success' }}">
+                                        {{ pendencia.status.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' if pendencia.prioridade == 'alta' else 'info' if pendencia.prioridade == 'media' else 'secondary' }}">
+                                        {{ pendencia.prioridade.title() }}
+                                    </span>
+                                </td>
+                                <td>{{ pendencia.responsavel.nome }}</td>
+                                <td>
+                                    <span class="text-{{ 'danger' if pendencia.prazo < now else 'warning' if (pendencia.prazo - now).days <= 1 else 'success' }}">
+                                        {{ pendencia.prazo.strftime('%d/%m/%Y %H:%M') }}
+                                    </span>
+                                </td>
+                                <td>{{ pendencia.criado_em.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" onclick="visualizarPendencia({{ pendencia.id }})" title="Visualizar">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if pendencia.status != 'concluida' %}
+                                        <button class="btn btn-outline-primary" onclick="moverPendencia({{ pendencia.id }}, 'em_andamento')" title="Em Andamento">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning" onclick="moverPendencia({{ pendencia.id }}, 'bloqueada')" title="Bloquear">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
+                                        <button class="btn btn-outline-success" onclick="moverPendencia({{ pendencia.id }}, 'concluida')" title="Concluir">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function moverPendencia(pendenciaId, novoStatus) {
+    if (confirm('Confirmar mudança de status?')) {
+        fetch(`/pendencias/${pendenciaId}/atualizar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `status=${novoStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao atualizar pendência');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao atualizar pendência');
+        });
+    }
+}
+
+function visualizarPendencia(pendenciaId) {
+    // Redirecionar para a página de visualização da pendência
+    window.location.href = `/pendencias/${pendenciaId}`;
+}
+
+function aplicarFiltros() {
+    const status = document.getElementById('filtroStatus').value;
+    const prioridade = document.getElementById('filtroPrioridade').value;
+    const responsavel = document.getElementById('filtroResponsavel').value;
+    const busca = document.getElementById('filtroBusca').value.toLowerCase();
+    
+    const linhas = document.querySelectorAll('#tabelaPendencias tbody tr');
+    
+    linhas.forEach(linha => {
+        let mostrar = true;
+        
+        // Filtro por status
+        if (status && linha.dataset.status !== status) {
+            mostrar = false;
+        }
+        
+        // Filtro por prioridade
+        if (mostrar && prioridade && linha.dataset.prioridade !== prioridade) {
+            mostrar = false;
+        }
+        
+        // Filtro por responsável
+        if (mostrar && responsavel && linha.dataset.responsavel !== responsavel) {
+            mostrar = false;
+        }
+        
+        // Filtro por busca (descrição)
+        if (mostrar && busca && !linha.dataset.descricao.includes(busca)) {
+            mostrar = false;
+        }
+        
+        linha.style.display = mostrar ? '' : 'none';
+    });
+    
+    // Mostrar contador de resultados
+    const linhasVisiveis = document.querySelectorAll('#tabelaPendencias tbody tr:not([style*="display: none"])').length;
+    const totalLinhas = linhas.length;
+    
+    // Atualizar ou criar contador
+    let contador = document.getElementById('contadorResultados');
+    if (!contador) {
+        contador = document.createElement('div');
+        contador.id = 'contadorResultados';
+        contador.className = 'alert alert-info mt-3';
+        document.querySelector('#tabelaPendencias').parentNode.insertBefore(contador, document.querySelector('#tabelaPendencias'));
+    }
+    
+    contador.innerHTML = `<i class="fas fa-info-circle me-2"></i>Mostrando ${linhasVisiveis} de ${totalLinhas} pendências`;
+}
+
+function limparFiltros() {
+    // Limpar campos
+    document.getElementById('filtroStatus').value = '';
+    document.getElementById('filtroPrioridade').value = '';
+    document.getElementById('filtroResponsavel').value = '';
+    document.getElementById('filtroBusca').value = '';
+    
+    // Mostrar todas as linhas
+    const linhas = document.querySelectorAll('#tabelaPendencias tbody tr');
+    linhas.forEach(linha => {
+        linha.style.display = '';
+    });
+    
+    // Remover contador
+    const contador = document.getElementById('contadorResultados');
+    if (contador) {
+        contador.remove();
+    }
+}
+
+function filtrarConcluidas() {
+    // Limpar filtros anteriores
+    limparFiltros();
+    
+    // Aplicar filtro de status "concluida"
+    document.getElementById('filtroStatus').value = 'concluida';
+    
+    // Aplicar o filtro
+    aplicarFiltros();
+    
+    // Rolar para a tabela
+    document.getElementById('tabelaPendencias').scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+$(document).ready(function() {
+    // Auto-refresh a cada 30 segundos
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+    
+    // Aplicar filtros ao pressionar Enter no campo de busca
+    document.getElementById('filtroBusca').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            aplicarFiltros();
+        }
+    });
+    
+    // Aplicar filtros automaticamente ao mudar os selects
+    document.getElementById('filtroStatus').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroPrioridade').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroResponsavel').addEventListener('change', aplicarFiltros);
+});
+</script>
+
+<style>
+.kanban-column {
+    min-height: 400px;
+    padding: 10px;
+}
+
+.kanban-item {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.kanban-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.card-outline {
+    border-width: 2px;
+}
+</style>
+{% endblock %} 

@@ -1,0 +1,852 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações - Passômetro{% endblock %}
+{% block page_title %}Configurações{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Configurações</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Configurações Gerais -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-cogs me-2"></i>Configurações Gerais
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('salvar_configuracoes') }}">
+                    <input type="hidden" name="tipo" value="geral">
+                    
+                    <div class="form-group">
+                        <label for="nome_sistema">Nome do Sistema</label>
+                        <input type="text" name="nome_sistema" id="nome_sistema" class="form-control" 
+                               value="{{ config.nome_sistema or 'Passômetro' }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="timezone">Fuso Horário</label>
+                        <select name="timezone" id="timezone" class="form-control">
+                            <option value="America/Sao_Paulo" {% if config.timezone == 'America/Sao_Paulo' %}selected{% endif %}>
+                                America/Sao_Paulo (Brasília)
+                            </option>
+                            <option value="America/Manaus" {% if config.timezone == 'America/Manaus' %}selected{% endif %}>
+                                America/Manaus (Manaus)
+                            </option>
+                            <option value="America/Belem" {% if config.timezone == 'America/Belem' %}selected{% endif %}>
+                                America/Belem (Belém)
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="auto_refresh">Auto-refresh (segundos)</label>
+                        <input type="number" name="auto_refresh" id="auto_refresh" class="form-control" 
+                               value="{{ config.auto_refresh or 30 }}" min="10" max="300">
+                        <small class="form-text text-muted">Intervalo para atualização automática das páginas</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="notificacoes_ativas" name="notificacoes_ativas"
+                                   {% if config.notificacoes_ativas %}checked{% endif %}>
+                            <label class="custom-control-label" for="notificacoes_ativas">
+                                Ativar notificações em tempo real
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Salvar Configurações
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Configurações de SLA -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-clock me-2"></i>Configurações de SLA
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('salvar_configuracoes') }}">
+                    <input type="hidden" name="tipo" value="sla">
+                    
+                    <div class="form-group">
+                        <label for="sla_critico">SLA Crítico (minutos)</label>
+                        <input type="number" name="sla_critico" id="sla_critico" class="form-control" 
+                               value="{{ config.sla_critico or 60 }}" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sla_alto">SLA Alto (minutos)</label>
+                        <input type="number" name="sla_alto" id="sla_alto" class="form-control" 
+                               value="{{ config.sla_alto or 240 }}" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sla_medio">SLA Médio (minutos)</label>
+                        <input type="number" name="sla_medio" id="sla_medio" class="form-control" 
+                               value="{{ config.sla_medio or 720 }}" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sla_baixo">SLA Baixo (minutos)</label>
+                        <input type="number" name="sla_baixo" id="sla_baixo" class="form-control" 
+                               value="{{ config.sla_baixo or 2880 }}" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="alerta_sla" name="alerta_sla"
+                                   {% if config.alerta_sla %}checked{% endif %}>
+                            <label class="custom-control-label" for="alerta_sla">
+                                Alertar quando SLA estiver próximo do vencimento
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="alerta_antecedencia">Antecedência do Alerta (minutos)</label>
+                        <input type="number" name="alerta_antecedencia" id="alerta_antecedencia" class="form-control" 
+                               value="{{ config.alerta_antecedencia or 30 }}" min="1">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Salvar SLA
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configurações de Registros -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-clipboard-list me-2"></i>Configurações de Registros
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('salvar_configuracoes') }}">
+                    <input type="hidden" name="tipo" value="registros">
+                    
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="exibir_template_comunicacao" name="exibir_template_comunicacao"
+                                   {% if config.exibir_template_comunicacao %}checked{% endif %}>
+                            <label class="custom-control-label" for="exibir_template_comunicacao">
+                                Exibir Template de Comunicação (SBAR/I-PASS) na criação de registros
+                            </label>
+                            <small class="form-text text-muted d-block">
+                                Quando ativado, mostra os campos SBAR e I-PASS na página de novo registro
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="template_padrao_sbar" name="template_padrao_sbar"
+                                   {% if config.template_padrao_sbar %}checked{% endif %}>
+                            <label class="custom-control-label" for="template_padrao_sbar">
+                                Usar SBAR como template padrão
+                            </label>
+                            <small class="form-text text-muted d-block">
+                                Quando ativado, o template SBAR será selecionado por padrão
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="campos_obrigatorios_template" name="campos_obrigatorios_template"
+                                   {% if config.campos_obrigatorios_template %}checked{% endif %}>
+                            <label class="custom-control-label" for="campos_obrigatorios_template">
+                                Campos do template são obrigatórios
+                            </label>
+                            <small class="form-text text-muted d-block">
+                                Quando ativado, os campos SBAR/I-PASS se tornam obrigatórios
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Salvar Configurações de Registros
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gestão de Usuários -->
+{% if 'gestor' in current_user.perfis %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-users me-2"></i>Gestão de Usuários
+                </h3>
+                <div class="card-tools">
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoUsuario">
+                        <i class="fas fa-plus me-1"></i>Novo Usuário
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Registro Profissional</th>
+                                <th>Perfis</th>
+                                <th>Status</th>
+                                <th>Último Acesso</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usuario in usuarios %}
+                            <tr>
+                                <td>{{ usuario.nome }}</td>
+                                <td>{{ usuario.email }}</td>
+                                <td>{{ usuario.registro_profissional or '-' }}</td>
+                                <td>
+                                    {% for perfil in usuario.perfis %}
+                                        <span class="badge bg-info">{{ perfil }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if usuario.ativo %}
+                                        <span class="badge bg-success">Ativo</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inativo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ usuario.criado_em.strftime('%d/%m/%Y %H:%M') if usuario.criado_em else 'N/A' }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" onclick="editarUsuario({{ usuario.id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-{{ 'danger' if usuario.ativo else 'success' }}" 
+                                                onclick="toggleUsuario({{ usuario.id }})">
+                                            <i class="fas fa-{{ 'ban' if usuario.ativo else 'check' }}"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Gestão de Postos de Trabalho -->
+{% if 'gestor' in current_user.perfis %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-hospital me-2"></i>Gestão de Postos de Trabalho
+                </h3>
+                <div class="card-tools">
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoPosto">
+                        <i class="fas fa-plus me-1"></i>Novo Posto
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Unidade</th>
+                                <th>Tipo</th>
+                                <th>Status</th>
+                                <th>Plantões Ativos</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for posto in postos %}
+                            <tr>
+                                <td>{{ posto.nome }}</td>
+                                <td>{{ posto.unidade.nome }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ posto.perfil_minimo.title() }}</span>
+                                </td>
+                                <td>
+                                    {% if posto.ativo %}
+                                        <span class="badge bg-success">Ativo</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inativo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ posto.plantoes|selectattr('status', 'equalto', 'aberto')|list|length }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" onclick="editarPosto({{ posto.id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-{{ 'danger' if posto.ativo else 'success' }}" 
+                                                onclick="togglePosto({{ posto.id }})">
+                                            <i class="fas fa-{{ 'ban' if posto.ativo else 'check' }}"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Backup e Manutenção -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-database me-2"></i>Backup e Restauração
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Último Backup</label>
+                    <p class="text-muted">{{ ultimo_backup or 'Nunca realizado' }}</p>
+                </div>
+                
+                <div class="form-group">
+                    <button class="btn btn-success" onclick="realizarBackup()">
+                        <i class="fas fa-download me-2"></i>Realizar Backup
+                    </button>
+                    <button class="btn btn-warning" onclick="restaurarBackup()">
+                        <i class="fas fa-upload me-2"></i>Restaurar Backup
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="backup_automatico" name="backup_automatico"
+                               {% if config.backup_automatico %}checked{% endif %}>
+                        <label class="form-check-label" for="backup_automatico">
+                            Backup automático diário
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tools me-2"></i>Manutenção
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <button class="btn btn-info" onclick="limparCache()">
+                        <i class="fas fa-broom me-2"></i>Limpar Cache
+                    </button>
+                    <button class="btn btn-secondary" onclick="otimizarBanco()">
+                        <i class="fas fa-database me-2"></i>Otimizar Banco
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <button class="btn btn-warning" onclick="modoManutencao()">
+                        <i class="fas fa-wrench me-2"></i>Modo Manutenção
+                    </button>
+                </div>
+                
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>Informações do Sistema</h6>
+                    <small>
+                        <strong>Versão:</strong> {{ versao_sistema }}<br>
+                        <strong>Última Atualização:</strong> {{ ultima_atualizacao }}<br>
+                        <strong>Espaço em Disco:</strong> {{ espaco_disco }}<br>
+                        <strong>Memória:</strong> {{ memoria_uso }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Usuário -->
+<div class="modal fade" id="modalNovoUsuario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Usuário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('criar_usuario') }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="nome">Nome Completo *</label>
+                        <input type="text" name="nome" id="nome" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input type="email" name="email" id="email" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registro_profissional">Registro Profissional</label>
+                        <input type="text" name="registro_profissional" id="registro_profissional" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="senha">Senha *</label>
+                        <input type="password" name="senha" id="senha" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="perfis">Perfis</label>
+                        <select name="perfis" id="perfis" class="form-control" multiple>
+                            <option value="operador">Operador</option>
+                            <option value="supervisor">Supervisor</option>
+                            <option value="gestor">Gestor</option>
+                            <option value="auditor">Auditor</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar Usuário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Posto -->
+<div class="modal fade" id="modalNovoPosto" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Posto de Trabalho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('criar_posto') }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="nome_posto">Nome do Posto *</label>
+                        <input type="text" name="nome" id="nome_posto" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="unidade_id">Unidade *</label>
+                        <select name="unidade_id" id="unidade_id" class="form-control" required>
+                            <option value="">Selecione uma unidade...</option>
+                            {% for unidade in unidades %}
+                            <option value="{{ unidade.id }}">{{ unidade.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="perfil_minimo">Perfil Mínimo *</label>
+                        <select name="perfil_minimo" id="perfil_minimo" class="form-control" required>
+                            <option value="medico">Médico</option>
+                            <option value="enfermeiro">Enfermeiro</option>
+                            <option value="tecnico">Técnico</option>
+                            <option value="administrativo">Administrativo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="descricao_posto">Descrição</label>
+                        <textarea name="descricao" id="descricao_posto" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar Posto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Usuário -->
+<div class="modal fade" id="modalEditarUsuario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Usuário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('editar_usuario') }}" id="formEditarUsuario">
+                <input type="hidden" name="usuario_id" id="edit_usuario_id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_nome">Nome Completo *</label>
+                        <input type="text" name="nome" id="edit_nome" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_email">Email *</label>
+                        <input type="email" name="email" id="edit_email" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_registro_profissional">Registro Profissional</label>
+                        <input type="text" name="registro_profissional" id="edit_registro_profissional" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_senha">Nova Senha (deixe em branco para manter a atual)</label>
+                        <input type="password" name="senha" id="edit_senha" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_perfis">Perfis</label>
+                        <select name="perfis" id="edit_perfis" class="form-control" multiple>
+                            <option value="operador">Operador</option>
+                            <option value="supervisor">Supervisor</option>
+                            <option value="gestor">Gestor</option>
+                            <option value="auditor">Auditor</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Posto -->
+<div class="modal fade" id="modalEditarPosto" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Posto de Trabalho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('editar_posto') }}" id="formEditarPosto">
+                <input type="hidden" name="posto_id" id="edit_posto_id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_nome_posto">Nome do Posto *</label>
+                        <input type="text" name="nome" id="edit_nome_posto" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_unidade_id">Unidade *</label>
+                        <select name="unidade_id" id="edit_unidade_id" class="form-control" required>
+                            <option value="">Selecione uma unidade...</option>
+                            {% for unidade in unidades %}
+                            <option value="{{ unidade.id }}">{{ unidade.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_perfil_minimo">Perfil Mínimo *</label>
+                        <select name="perfil_minimo" id="edit_perfil_minimo" class="form-control" required>
+                            <option value="medico">Médico</option>
+                            <option value="enfermeiro">Enfermeiro</option>
+                            <option value="tecnico">Técnico</option>
+                            <option value="administrativo">Administrativo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_descricao_posto">Descrição</label>
+                        <textarea name="descricao" id="edit_descricao_posto" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editarUsuario(usuarioId) {
+    // Buscar dados do usuário via AJAX
+    fetch(`/usuarios/${usuarioId}/dados`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const usuario = data.usuario;
+                
+                // Preencher o formulário
+                document.getElementById('edit_usuario_id').value = usuario.id;
+                document.getElementById('edit_nome').value = usuario.nome;
+                document.getElementById('edit_email').value = usuario.email;
+                document.getElementById('edit_registro_profissional').value = usuario.registro_profissional || '';
+                document.getElementById('edit_senha').value = '';
+                
+                // Limpar seleções anteriores
+                const perfisSelect = document.getElementById('edit_perfis');
+                for (let option of perfisSelect.options) {
+                    option.selected = false;
+                }
+                
+                // Selecionar perfis do usuário
+                if (usuario.perfis) {
+                    for (let perfil of usuario.perfis) {
+                        for (let option of perfisSelect.options) {
+                            if (option.value === perfil) {
+                                option.selected = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Abrir modal
+                const modal = new bootstrap.Modal(document.getElementById('modalEditarUsuario'));
+                modal.show();
+            } else {
+                alert('Erro ao carregar dados do usuário');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao carregar dados do usuário');
+        });
+}
+
+function toggleUsuario(usuarioId) {
+    if (confirm('Confirmar alteração de status do usuário?')) {
+        fetch(`/usuarios/${usuarioId}/toggle`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao alterar status do usuário');
+            }
+        });
+    }
+}
+
+function editarPosto(postoId) {
+    // Buscar dados do posto via AJAX
+    fetch(`/postos/${postoId}/dados`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const posto = data.posto;
+                
+                // Preencher o formulário
+                document.getElementById('edit_posto_id').value = posto.id;
+                document.getElementById('edit_nome_posto').value = posto.nome;
+                document.getElementById('edit_unidade_id').value = posto.unidade_id;
+                document.getElementById('edit_perfil_minimo').value = posto.perfil_minimo;
+                document.getElementById('edit_descricao_posto').value = posto.descricao || '';
+                
+                // Abrir modal
+                const modal = new bootstrap.Modal(document.getElementById('modalEditarPosto'));
+                modal.show();
+            } else {
+                alert('Erro ao carregar dados do posto');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao carregar dados do posto');
+        });
+}
+
+function togglePosto(postoId) {
+    if (confirm('Confirmar alteração de status do posto?')) {
+        fetch(`/postos/${postoId}/toggle`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao alterar status do posto');
+            }
+        });
+    }
+}
+
+function realizarBackup() {
+    if (confirm('Confirmar realização do backup?')) {
+        // Mostrar indicador de carregamento
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando Backup...';
+        button.disabled = true;
+        
+        fetch('/backup/realizar', {
+            method: 'POST'
+        })
+        .then(response => {
+            // Verificar se é um arquivo para download
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/sql')) {
+                // É um arquivo para download
+                return response.blob().then(blob => {
+                    // Criar link de download
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'backup.sql';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    // Reabilitar botão
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    
+                    // Mostrar mensagem de sucesso
+                    alert('Backup realizado com sucesso! O arquivo foi baixado automaticamente.');
+                    location.reload();
+                });
+            } else {
+                // É uma resposta JSON (erro)
+                return response.json().then(data => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    
+                    if (data.success) {
+                        alert('Backup realizado com sucesso!');
+                        location.reload();
+                    } else {
+                        alert('Erro ao realizar backup: ' + data.message);
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            // Reabilitar botão em caso de erro
+            button.innerHTML = originalText;
+            button.disabled = false;
+            console.error('Erro:', error);
+            alert('Erro ao realizar backup');
+        });
+    }
+}
+
+function restaurarBackup() {
+    if (confirm('ATENÇÃO: Esta ação irá substituir todos os dados atuais. Continuar?')) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.sql,.backup';
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append('backup_file', file);
+                
+                fetch('/backup/restaurar', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Backup restaurado com sucesso!');
+                        location.reload();
+                    } else {
+                        alert('Erro ao restaurar backup');
+                    }
+                });
+            }
+        };
+        input.click();
+    }
+}
+
+function limparCache() {
+    if (confirm('Confirmar limpeza do cache?')) {
+        fetch('/manutencao/limpar-cache', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Cache limpo com sucesso!');
+            } else {
+                alert('Erro ao limpar cache');
+            }
+        });
+    }
+}
+
+function otimizarBanco() {
+    if (confirm('Confirmar otimização do banco de dados?')) {
+        fetch('/manutencao/otimizar-banco', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Banco otimizado com sucesso!');
+            } else {
+                alert('Erro ao otimizar banco');
+            }
+        });
+    }
+}
+
+function modoManutencao() {
+    if (confirm('Ativar modo manutenção? O sistema ficará indisponível para usuários.')) {
+        fetch('/manutencao/modo-manutencao', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Modo manutenção ativado!');
+            } else {
+                alert('Erro ao ativar modo manutenção');
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

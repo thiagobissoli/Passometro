@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Passômetro{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Plantão Ativo Banner -->
+{% if plantao_ativo %}
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    <h5 class="alert-heading">
+        <i class="fas fa-clock me-2"></i>Plantão em Andamento
+        {% if is_gestor %}
+        <span class="badge bg-success ms-2">Gestor</span>
+        {% endif %}
+    </h5>
+    <p class="mb-0">
+        <strong>{{ plantao_ativo.posto.nome }}</strong> - 
+        Iniciado em {{ plantao_ativo.data_inicio.strftime('%d/%m/%Y às %H:%M') }}
+        <span class="float-right">
+            <a href="{{ url_for('passagem') }}" class="btn btn-sm btn-outline-info">
+                <i class="fas fa-exchange-alt me-1"></i>Gerenciar Passagem
+            </a>
+        </span>
+    </p>
+</div>
+{% else %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <h5 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>Nenhum Plantão Ativo
+        {% if is_gestor %}
+        <span class="badge bg-success ms-2">Gestor</span>
+        {% endif %}
+    </h5>
+    <p class="mb-0">
+        Você não possui um plantão ativo no momento.
+        <span class="float-right">
+            <a href="{{ url_for('iniciar_plantao') }}" class="btn btn-sm btn-outline-warning">
+                <i class="fas fa-plus me-1"></i>Iniciar Plantão
+            </a>
+        </span>
+    </p>
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-bolt me-2"></i>Ações Rápidas
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="{{ url_for('novo_registro') }}" class="btn btn-primary w-100">
+                            <i class="fas fa-file-medical me-2"></i>Novo Registro SBAR
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="{{ url_for('nova_pendencia') }}" class="btn btn-warning w-100">
+                            <i class="fas fa-tasks me-2"></i>Criar Pendência
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="{{ url_for('registros') }}" class="btn btn-info w-100">
+                            <i class="fas fa-clipboard-list me-2"></i>Ver Registros
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="{{ url_for('passagem') }}" class="btn btn-success w-100">
+                            <i class="fas fa-exchange-alt me-2"></i>Preparar Passagem
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Grid -->
+<div class="row">
+    <!-- Alertas Críticos -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card card-danger">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Alertas Críticos
+                    {% if not is_gestor %}
+                    <small class="text-muted">(Posto)</small>
+                    {% endif %}
+                </h3>
+                <div class="card-tools">
+                    <span class="badge bg-light">{{ pendencias_criticas|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <tbody>
+                            {% for pendencia in pendencias_criticas %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ pendencia.descricao[:50] }}...</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i>{{ pendencia.responsavel.nome }}
+                                            </small>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="badge bg-danger">
+                                                SLA: {{ ((pendencia.prazo - now).total_seconds() / 60)|round|int }}min
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td class="text-center text-muted py-3">
+                                    <i class="fas fa-check-circle me-2"></i>Nenhum alerta crítico
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('pendencias') }}" class="text-danger">
+                    Ver todas as pendências <i class="fas fa-arrow-right me-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pendências -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card card-warning">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tasks me-2"></i>Pendências do Posto
+                    {% if not is_gestor %}
+                    <small class="text-muted">(Posto)</small>
+                    {% endif %}
+                </h3>
+                <div class="card-tools">
+                    <span class="badge bg-light">{{ pendencias_usuario|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <tbody>
+                            {% for pendencia in pendencias_usuario[:5] %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ pendencia.descricao[:50] }}...</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>{{ pendencia.prazo.strftime('%d/%m %H:%M') }}
+                                            </small>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="badge bg-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' }}">
+                                                {{ pendencia.prioridade.title() }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td class="text-center text-muted py-3">
+                                    <i class="fas fa-check-circle me-2"></i>Nenhuma pendência
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('pendencias') }}" class="text-warning">
+                    Ver todas <i class="fas fa-arrow-right me-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registros Recentes -->
+    <div class="col-lg-4 col-md-6">
+        <div class="card card-info">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-clipboard-list me-2"></i>Registros Recentes
+                    {% if not is_gestor %}
+                    <small class="text-muted">(Posto)</small>
+                    {% endif %}
+                </h3>
+                <div class="card-tools">
+                    <span class="badge bg-light">{{ registros_recentes|length }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <tbody>
+                            {% for registro in registros_recentes[:5] %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ registro.titulo[:50] }}...</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i>{{ registro.criador.nome }}
+                                            </small>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="badge bg-{{ 'danger' if registro.prioridade == 'critica' else 'info' }}">
+                                                {{ registro.prioridade.title() }}
+                                            </span>
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ registro.criado_em.strftime('%H:%M') }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td class="text-center text-muted py-3">
+                                    <i class="fas fa-clipboard me-2"></i>Nenhum registro
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('registros') }}" class="text-info">
+                    Ver todos <i class="fas fa-arrow-right me-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Linha do Tempo do Plantão -->
+{% if plantao_ativo %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-history me-2"></i>Linha do Tempo do Plantão
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <!-- Início do Plantão -->
+                    <div class="time-label">
+                        <span class="bg-blue">{{ plantao_ativo.data_inicio.strftime('%H:%M') }}</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-play bg-blue"></i>
+                        <div class="timeline-item">
+                            <span class="time"><i class="fas fa-clock"></i> {{ plantao_ativo.data_inicio.strftime('%H:%M') }}</span>
+                            <h3 class="timeline-header">Início do Plantão</h3>
+                            <div class="timeline-body">
+                                {{ current_user.nome }} assumiu o plantão da {{ plantao_ativo.posto.nome }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Registros do Plantão -->
+                    {% for registro in registros_recentes[:10] %}
+                    <div>
+                        <i class="fas fa-{{ 'exclamation-triangle' if registro.prioridade == 'critica' else 'file-medical' }} bg-{{ 'danger' if registro.prioridade == 'critica' else 'info' }}"></i>
+                        <div class="timeline-item">
+                            <span class="time"><i class="fas fa-clock"></i> {{ registro.criado_em.strftime('%H:%M') }}</span>
+                            <h3 class="timeline-header">{{ registro.titulo }}</h3>
+                            <div class="timeline-body">
+                                <span class="badge bg-{{ 'danger' if registro.prioridade == 'critica' else 'info' }}">
+                                    {{ registro.prioridade.title() }}
+                                </span>
+                                <span class="badge bg-secondary">{{ registro.categoria.title() }}</span>
+                                <br>
+                                {{ registro.descricao_rica[:100] }}...
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Fim da linha do tempo -->
+                    <div>
+                        <i class="fas fa-clock bg-gray"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- KPIs -->
+<div class="row mt-4">
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3>{{ total_registros_hoje }}</h3>
+                <p>Registros Hoje{% if not is_gestor %} (Posto){% endif %}</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <a href="{{ url_for('registros') }}" class="small-box-footer">
+                Ver todos <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+            <div class="inner">
+                <h3>{{ total_pendencias_abertas }}</h3>
+                <p>Pendências Abertas{% if not is_gestor %} (Posto){% endif %}</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-tasks"></i>
+            </div>
+            <a href="{{ url_for('pendencias') }}" class="small-box-footer">
+                Ver todas <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+            <div class="inner">
+                <h3>{{ pendencias_criticas|length }}</h3>
+                <p>Pendências Críticas{% if not is_gestor %} (Posto){% endif %}</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <a href="{{ url_for('pendencias') }}" class="small-box-footer">
+                Ver todas <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+            <div class="inner">
+                <h3>{{ sla_cumprido }}%</h3>
+                <p>SLA Cumprido{% if not is_gestor %} (Posto){% endif %}</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <a href="{{ url_for('relatorios') }}" class="small-box-footer">
+                Ver relatórios <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- KPIs Adicionais -->
+<div class="row mt-4">
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-primary">
+            <div class="inner">
+                <h3>{{ total_plantoes_ativos }}</h3>
+                <p>Plantões Ativos</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <a href="{{ url_for('passagem') }}" class="small-box-footer">
+                Ver plantões <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-secondary">
+            <div class="inner">
+                <h3>{{ pendencias_usuario|length }}</h3>
+                <p>Pendências do Posto</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-user-clock"></i>
+            </div>
+                            <a href="{{ url_for('pendencias') }}" class="small-box-footer">
+                    Ver pendências do posto <i class="fas fa-arrow-circle-right"></i>
+                </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-dark">
+            <div class="inner">
+                <h3>{{ registros_recentes|length }}</h3>
+                <p>Registros Recentes</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <a href="{{ url_for('registros') }}" class="small-box-footer">
+                Ver registros <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-light">
+            <div class="inner">
+                <h3>{{ (total_pendencias_abertas - pendencias_criticas|length) if total_pendencias_abertas >= pendencias_criticas|length else 0 }}</h3>
+                <p>Pendências Normais</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-list-check"></i>
+            </div>
+            <a href="{{ url_for('pendencias') }}" class="small-box-footer">
+                Ver todas <i class="fas fa-arrow-circle-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Atualizar dados em tempo real
+setInterval(function() {
+    // Atualizar contadores de SLA
+    fetch('/api/pendencias/criticas')
+        .then(response => response.json())
+        .then(data => {
+            // Atualizar interface com dados críticos
+            console.log('Dados críticos atualizados:', data);
+        });
+}, 30000); // Atualizar a cada 30 segundos
+</script>
+{% endblock %} 

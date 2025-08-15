@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório {{ tipo.title() }} - Passômetro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .header p {
+            color: #6c757d;
+            margin: 10px 0 0 0;
+            font-size: 1.1em;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .metric-card h3 {
+            margin: 0;
+            font-size: 2em;
+        }
+        .metric-card p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            color: #495057;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #e9ecef;
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .badge-success { background-color: #28a745; color: white; }
+        .badge-warning { background-color: #ffc107; color: #212529; }
+        .badge-danger { background-color: #dc3545; color: white; }
+        .badge-info { background-color: #17a2b8; color: white; }
+        .badge-secondary { background-color: #6c757d; color: white; }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+        }
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .print-button:hover {
+            background-color: #0056b3;
+        }
+        @media print {
+            .print-button { display: none; }
+            body { background-color: white; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button" onclick="window.print()">🖨️ Imprimir</button>
+    
+    <div class="container">
+        <div class="header">
+            <h1>📊 Relatório {{ tipo.title() }}</h1>
+            <p><strong>Período:</strong> {{ periodo }}</p>
+            <p><strong>Gerado em:</strong> {{ data_geracao.strftime('%d/%m/%Y às %H:%M') }}</p>
+            <p><strong>Sistema:</strong> Passômetro - Sistema de Passagem de Plantão</p>
+        </div>
+
+        <div class="info-box">
+            <h3>📋 Resumo Executivo</h3>
+            <p>Este relatório apresenta um resumo completo das atividades realizadas no período especificado, incluindo plantões, registros criados e pendências geradas.</p>
+        </div>
+
+        <div class="info-grid">
+            <div class="metric-card">
+                <h3>{{ total_plantoes }}</h3>
+                <p>Plantões Realizados</p>
+            </div>
+            <div class="metric-card">
+                <h3>{{ total_registros }}</h3>
+                <p>Registros Criados</p>
+            </div>
+            <div class="metric-card">
+                <h3>{{ total_pendencias }}</h3>
+                <p>Pendências Geradas</p>
+            </div>
+            <div class="metric-card">
+                <h3>{{ pendencias_concluidas }}</h3>
+                <p>Pendências Concluídas</p>
+            </div>
+        </div>
+
+        {% if plantoes %}
+        <div class="section">
+            <h2>🏥 Plantões Realizados</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Posto</th>
+                        <th>Profissional</th>
+                        <th>Status</th>
+                        <th>Registros</th>
+                        <th>Duração</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plantao in plantoes %}
+                    <tr>
+                        <td>{{ plantao.data_inicio.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ plantao.posto.nome if plantao.posto else 'N/A' }}</td>
+                        <td>{{ plantao.usuario.nome if plantao.usuario else 'N/A' }}</td>
+                        <td>
+                            <span class="badge badge-{{ 'success' if plantao.status == 'aberto' else 'secondary' }}">
+                                {{ plantao.status.title() }}
+                            </span>
+                        </td>
+                        <td>{{ plantao.registros|length if plantao.registros else 0 }}</td>
+                        <td>
+                            {% if plantao.data_fim %}
+                                {{ ((plantao.data_fim - plantao.data_inicio).total_seconds() / 3600)|round(1) }}h
+                            {% else %}
+                                Em andamento
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if registros %}
+        <div class="section">
+            <h2>📝 Registros Criados</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Tipo</th>
+                        <th>Título</th>
+                        <th>Prioridade</th>
+                        <th>Urgente</th>
+                        <th>Plantão</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in registros %}
+                    <tr>
+                        <td>{{ registro.criado_em.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            <span class="badge badge-{{ 'primary' if registro.tipo == 'evento' else 'success' if registro.tipo == 'ocorrencia' else 'warning' if registro.tipo == 'comunicado' else 'danger' }}">
+                                {{ registro.tipo.title() }}
+                            </span>
+                        </td>
+                        <td>{{ registro.titulo }}</td>
+                        <td>
+                            <span class="badge badge-{{ 'danger' if registro.prioridade == 'critica' else 'warning' if registro.prioridade == 'alta' else 'info' if registro.prioridade == 'media' else 'secondary' }}">
+                                {{ registro.prioridade.title() }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ 'danger' if registro.urgente else 'success' }}">
+                                {{ 'Sim' if registro.urgente else 'Não' }}
+                            </span>
+                        </td>
+                        <td>{{ registro.plantao.posto.nome if registro.plantao and registro.plantao.posto else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if pendencias %}
+        <div class="section">
+            <h2>⚠️ Pendências Geradas</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Descrição</th>
+                        <th>Responsável</th>
+                        <th>Prioridade</th>
+                        <th>Status</th>
+                        <th>Prazo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pendencia in pendencias %}
+                    <tr>
+                        <td>{{ pendencia.criado_em.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ pendencia.descricao[:50] }}{% if pendencia.descricao|length > 50 %}...{% endif %}</td>
+                        <td>{{ pendencia.responsavel.nome if pendencia.responsavel else 'Não definido' }}</td>
+                        <td>
+                            <span class="badge badge-{{ 'danger' if pendencia.prioridade == 'critica' else 'warning' if pendencia.prioridade == 'alta' else 'info' if pendencia.prioridade == 'media' else 'secondary' }}">
+                                {{ pendencia.prioridade.title() }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ 'warning' if pendencia.status == 'aberta' else 'info' if pendencia.status == 'em_andamento' else 'secondary' if pendencia.status == 'bloqueada' else 'success' }}">
+                                {{ pendencia.status.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>{{ pendencia.prazo.strftime('%d/%m/%Y %H:%M') if pendencia.prazo else 'Não definido' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <div class="section">
+            <h2>📊 Análise de Dados</h2>
+            <div class="info-grid">
+                <div class="info-box">
+                    <h4>📈 Taxa de Conclusão de Pendências</h4>
+                    <p><strong>{{ "%.1f"|format(pendencias_concluidas / total_pendencias * 100) if total_pendencias > 0 else 0 }}%</strong></p>
+                    <small>{{ pendencias_concluidas }} de {{ total_pendencias }} pendências concluídas</small>
+                </div>
+                <div class="info-box">
+                    <h4>📅 Média de Registros por Plantão</h4>
+                    <p><strong>{{ "%.1f"|format(total_registros / total_plantoes) if total_plantoes > 0 else 0 }}</strong></p>
+                    <small>registros por plantão</small>
+                </div>
+                <div class="info-box">
+                    <h4>⏰ Período Analisado</h4>
+                    <p><strong>{{ data_inicio.strftime('%d/%m/%Y %H:%M') }}</strong></p>
+                    <p><strong>{{ data_fim.strftime('%d/%m/%Y %H:%M') }}</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Passômetro</strong> - Sistema de Passagem de Plantão</p>
+            <p>Relatório gerado automaticamente em {{ data_geracao.strftime('%d/%m/%Y às %H:%M:%S') }}</p>
+            <p>© 2024 - Todos os direitos reservados</p>
+        </div>
+    </div>
+</body>
+</html> 

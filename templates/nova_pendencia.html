@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Pendência - Passômetro{% endblock %}
+{% block page_title %}Nova Pendência{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('pendencias') }}">Pendências</a></li>
+<li class="breadcrumb-item active">Nova</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tasks me-2"></i>Criar Nova Pendência
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="pendencia-form">
+                    <!-- Registro Relacionado -->
+                    <div class="form-group">
+                        <label for="registro_id">Registro Relacionado *</label>
+                        <select name="registro_id" id="registro_id" class="form-control" required>
+                            <option value="">Selecione um registro...</option>
+                            {% for registro in registros %}
+                            <option value="{{ registro.id }}">
+                                {{ registro.titulo }} ({{ registro.criado_em.strftime('%d/%m %H:%M') }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            Selecione o registro que originou esta pendência
+                        </small>
+                    </div>
+
+                    <!-- Descrição da Pendência -->
+                    <div class="form-group">
+                        <label for="descricao">Descrição da Pendência *</label>
+                        <textarea name="descricao" id="descricao" class="form-control" rows="3" required 
+                                  placeholder="Descreva detalhadamente o que precisa ser feito..."></textarea>
+                    </div>
+
+                    <!-- Responsável -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="responsavel_id">Responsável *</label>
+                                <select name="responsavel_id" id="responsavel_id" class="form-control" required>
+                                    <option value="">Selecione o responsável...</option>
+                                    {% for usuario in usuarios %}
+                                    <option value="{{ usuario.id }}" {% if usuario.id == current_user.id %}selected{% endif %}>
+                                        {{ usuario.nome }} 
+                                        {% if usuario.registro_profissional %}({{ usuario.registro_profissional }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="prioridade">Prioridade *</label>
+                                <select name="prioridade" id="prioridade" class="form-control" required>
+                                    <option value="baixa">Baixa</option>
+                                    <option value="media" selected>Média</option>
+                                    <option value="alta">Alta</option>
+                                    <option value="critica">Crítica</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prazo e SLA -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="prazo">Prazo *</label>
+                                <input type="datetime-local" name="prazo" id="prazo" class="form-control" required>
+                                <small class="form-text text-muted">
+                                    Data e hora limite para conclusão
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="sla_minutos">SLA (minutos)</label>
+                                <input type="number" name="sla_minutos" id="sla_minutos" class="form-control" 
+                                       placeholder="Ex: 60, 240, 720" min="1">
+                                <small class="form-text text-muted">
+                                    Tempo máximo em minutos para resolução
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SLA Sugerido -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>SLA Sugerido por Prioridade:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Crítica:</strong> 60 minutos</li>
+                            <li><strong>Alta:</strong> 240 minutos (4 horas)</li>
+                            <li><strong>Média:</strong> 720 minutos (12 horas)</li>
+                            <li><strong>Baixa:</strong> 2880 minutos (48 horas)</li>
+                        </ul>
+                    </div>
+
+                    <!-- Observações Adicionais -->
+                    <div class="form-group">
+                        <label for="observacoes">Observações Adicionais</label>
+                        <textarea name="observacoes" id="observacoes" class="form-control" rows="3" 
+                                  placeholder="Informações complementares, contexto, recursos necessários..."></textarea>
+                    </div>
+
+                    <!-- Ações -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Criar Pendência
+                            </button>
+                            <a href="{{ url_for('pendencias') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview do SLA -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-clock me-2"></i>Preview do SLA
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="sla-preview" class="text-center">
+                    <p class="text-muted">Configure o prazo e prioridade para ver o SLA sugerido</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Definir prazo padrão (2 horas a partir de agora)
+    const agora = new Date();
+    agora.setHours(agora.getHours() + 2);
+    const prazoPadrao = agora.toISOString().slice(0, 16);
+    $('#prazo').val(prazoPadrao);
+    
+    // Auto-save form data
+    $('#pendencia-form').on('input change', function() {
+        const formData = {};
+        $(this).find('input, textarea, select').each(function() {
+            const field = $(this);
+            if (field.attr('name')) {
+                formData[field.attr('name')] = field.val();
+            }
+        });
+        
+        localStorage.setItem('passometro_pendencia_form', JSON.stringify(formData));
+    });
+    
+    // Load saved data
+    const savedData = localStorage.getItem('passometro_pendencia_form');
+    if (savedData) {
+        const data = JSON.parse(savedData);
+        Object.keys(data).forEach(key => {
+            const field = $(`[name="${key}"]`);
+            if (field.length) {
+                field.val(data[key]);
+            }
+        });
+    }
+    
+    // Clear saved data on successful submit
+    $('#pendencia-form').on('submit', function() {
+        localStorage.removeItem('passometro_pendencia_form');
+    });
+    
+    // Atualizar SLA sugerido baseado na prioridade
+    $('#prioridade').on('change', function() {
+        atualizarSLASugerido();
+    });
+    
+    // Atualizar preview do SLA
+    $('#prazo, #prioridade').on('change', function() {
+        atualizarPreviewSLA();
+    });
+    
+    // Inicializar
+    atualizarSLASugerido();
+    atualizarPreviewSLA();
+});
+
+function atualizarSLASugerido() {
+    const prioridade = $('#prioridade').val();
+    let slaSugerido = '';
+    
+    switch(prioridade) {
+        case 'critica':
+            slaSugerido = 60;
+            break;
+        case 'alta':
+            slaSugerido = 240;
+            break;
+        case 'media':
+            slaSugerido = 720;
+            break;
+        case 'baixa':
+            slaSugerido = 2880;
+            break;
+    }
+    
+    $('#sla_minutos').val(slaSugerido);
+}
+
+function atualizarPreviewSLA() {
+    const prazo = $('#prazo').val();
+    const prioridade = $('#prioridade').val();
+    
+    if (!prazo) {
+        $('#sla-preview').html('<p class="text-muted">Configure o prazo para ver o preview</p>');
+        return;
+    }
+    
+    const prazoDate = new Date(prazo);
+    const agora = new Date();
+    const diferencaMinutos = Math.round((prazoDate - agora) / (1000 * 60));
+    
+    let statusClass = 'success';
+    let statusText = 'Dentro do prazo';
+    
+    if (diferencaMinutos < 0) {
+        statusClass = 'danger';
+        statusText = 'Vencido';
+    } else if (diferencaMinutos < 60) {
+        statusClass = 'warning';
+        statusText = 'Próximo do vencimento';
+    }
+    
+    const preview = `
+        <div class="row">
+            <div class="col-md-4">
+                <div class="text-center">
+                    <h4 class="text-${statusClass}">${statusText}</h4>
+                    <p class="text-muted">Status do SLA</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center">
+                    <h4 class="text-info">${diferencaMinutos > 0 ? diferencaMinutos : Math.abs(diferencaMinutos)}</h4>
+                    <p class="text-muted">${diferencaMinutos > 0 ? 'Minutos restantes' : 'Minutos vencidos'}</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center">
+                    <h4 class="text-secondary">${prioridade.toUpperCase()}</h4>
+                    <p class="text-muted">Prioridade</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $('#sla-preview').html(preview);
+}
+</script>
+{% endblock %} 

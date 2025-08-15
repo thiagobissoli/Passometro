@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Registro - Passômetro{% endblock %}
+{% block page_title %}Novo Registro{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('registros') }}">Registros</a></li>
+<li class="breadcrumb-item active">Novo</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-file-medical me-2"></i>Criar Novo Registro
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="registro-form">
+                    <!-- Informações Básicas -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="tipo">Tipo de Registro *</label>
+                                <select name="tipo" id="tipo" class="form-control" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="evento">Evento</option>
+                                    <option value="ocorrencia">Ocorrência</option>
+                                    <option value="comunicado">Comunicado</option>
+                                    <option value="alerta">Alerta</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="categoria">Categoria *</label>
+                                <select name="categoria" id="categoria" class="form-control" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="clinico">Clínico</option>
+                                    <option value="logistica">Logística</option>
+                                    <option value="ti">TI</option>
+                                    <option value="manutencao">Manutenção</option>
+                                    <option value="suprimentos">Suprimentos</option>
+                                    <option value="comunicacao">Comunicação com Família</option>
+                                    <option value="regulacao">Regulação</option>
+                                    <option value="transporte">Transporte</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label for="titulo">Título *</label>
+                                <input type="text" name="titulo" id="titulo" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="prioridade">Prioridade *</label>
+                                <select name="prioridade" id="prioridade" class="form-control" required>
+                                    <option value="baixa">Baixa</option>
+                                    <option value="media" selected>Média</option>
+                                    <option value="alta">Alta</option>
+                                    <option value="critica">Crítica</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tags">Tags (separadas por vírgula)</label>
+                        <input type="text" name="tags" id="tags" class="form-control" placeholder="Ex: paciente, equipamento, medicamento">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descricao_rica">Descrição Detalhada *</label>
+                        <textarea name="descricao_rica" id="descricao_rica" class="form-control" rows="4" required></textarea>
+                    </div>
+
+                    <!-- Template Selection -->
+                    {% if config.exibir_template_comunicacao %}
+                    <div class="form-group">
+                        <label>Template de Comunicação</label>
+                        <div class="btn-group btn-group-toggle" data-bs-toggle="buttons">
+                            <label class="btn btn-outline-primary {% if config.template_padrao_sbar %}active{% endif %}">
+                                <input type="radio" name="template" value="sbar" {% if config.template_padrao_sbar %}checked{% endif %}> SBAR
+                            </label>
+                            <label class="btn btn-outline-primary {% if not config.template_padrao_sbar %}active{% endif %}">
+                                <input type="radio" name="template" value="ipass" {% if not config.template_padrao_sbar %}checked{% endif %}> I-PASS
+                            </label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- SBAR Template -->
+                    {% if config.exibir_template_comunicacao %}
+                    <div id="sbar-template" class="template-section" {% if not config.template_padrao_sbar %}style="display: none;"{% endif %}>
+                        <h5 class="text-primary">
+                            <i class="fas fa-clipboard-list me-2"></i>Template SBAR
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="situacao">Situação{% if config.campos_obrigatorios_template %} *{% endif %}</label>
+                                    <textarea name="situacao" id="situacao" class="form-control" rows="2" placeholder="Descreva brevemente a situação atual..."{% if config.campos_obrigatorios_template %} required{% endif %}></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="background">Background{% if config.campos_obrigatorios_template %} *{% endif %}</label>
+                                    <textarea name="background" id="background" class="form-control" rows="2" placeholder="Informações relevantes do histórico..."{% if config.campos_obrigatorios_template %} required{% endif %}></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="avaliacao">Avaliação{% if config.campos_obrigatorios_template %} *{% endif %}</label>
+                                    <textarea name="avaliacao" id="avaliacao" class="form-control" rows="2" placeholder="Sua interpretação clínica/operacional..."{% if config.campos_obrigatorios_template %} required{% endif %}></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="recomendacao">Recomendação{% if config.campos_obrigatorios_template %} *{% endif %}</label>
+                                    <textarea name="recomendacao" id="recomendacao" class="form-control" rows="2" placeholder="Ação solicitada ou recomendada..."{% if config.campos_obrigatorios_template %} required{% endif %}></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- I-PASS Template -->
+                    {% if config.exibir_template_comunicacao %}
+                    <div id="ipass-template" class="template-section" {% if config.template_padrao_sbar %}style="display: none;"{% endif %}>
+                        <h5 class="text-primary">
+                            <i class="fas fa-user-md me-2"></i>Template I-PASS
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="illness_severity">Severidade da Doença{% if config.campos_obrigatorios_template %} *{% endif %}</label>
+                                    <select name="illness_severity" id="illness_severity" class="form-control"{% if config.campos_obrigatorios_template %} required{% endif %}>
+                                        <option value="">Selecione...</option>
+                                        <option value="estavel">Estável</option>
+                                        <option value="inquieto">Inquieto</option>
+                                        <option value="critico">Crítico</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="patient_summary">Resumo do Paciente{% if config.campos_obrigatorios_template %} *{% endif %}</label>
+                                    <textarea name="patient_summary" id="patient_summary" class="form-control" rows="2" placeholder="Resumo do caso..."{% if config.campos_obrigatorios_template %} required{% endif %}></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="action_list">Lista de Ações{% if config.campos_obrigatorios_template %} *{% endif %}</label>
+                                    <textarea name="action_list" id="action_list" class="form-control" rows="2" placeholder="Ações pendentes ou necessárias..."{% if config.campos_obrigatorios_template %} required{% endif %}></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="situation_awareness">Consciência Situacional{% if config.campos_obrigatorios_template %} *{% endif %}</label>
+                                    <textarea name="situation_awareness" id="situation_awareness" class="form-control" rows="2" placeholder="Contingências e alertas..."{% if config.campos_obrigatorios_template %} required{% endif %}></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="synthesis_by_receiver">Síntese pelo Receptor</label>
+                            <textarea name="synthesis_by_receiver" id="synthesis_by_receiver" class="form-control" rows="2" placeholder="Confirmação de entendimento..."></textarea>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Opções Adicionais -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                                            <div class="form-check">
+                                <input type="checkbox" name="confidencial" id="confidencial" class="form-check-input">
+                                <label class="form-check-label" for="confidencial">
+                                    Registro Confidencial
+                                </label>
+                            </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                                            <div class="form-check">
+                                <input type="checkbox" name="criar_pendencia" id="criar_pendencia" class="form-check-input">
+                                <label class="form-check-label" for="criar_pendencia">
+                                    Criar Pendência Relacionada
+                                </label>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos de Pendência (ocultos por padrão) -->
+                    <div id="pendencia-campos" style="display: none;">
+                        <hr>
+                        <h6 class="text-warning">
+                            <i class="fas fa-tasks me-2"></i>Pendência Relacionada
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label for="pendencia_descricao">Descrição da Pendência</label>
+                                    <textarea name="pendencia_descricao" id="pendencia_descricao" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="pendencia_prazo">Prazo</label>
+                                    <input type="datetime-local" name="pendencia_prazo" id="pendencia_prazo" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Salvar Registro
+                            </button>
+                            <a href="{{ url_for('registros') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Template switching (only if templates are enabled)
+    {% if config.exibir_template_comunicacao %}
+    $('input[name="template"]').on('change', function() {
+        const template = $(this).val();
+        
+        if (template === 'sbar') {
+            $('#sbar-template').show();
+            $('#ipass-template').hide();
+        } else {
+            $('#sbar-template').hide();
+            $('#ipass-template').show();
+        }
+    });
+    {% endif %}
+    
+    // Show/hide pendency fields
+    $('#criar_pendencia').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#pendencia-campos').show();
+        } else {
+            $('#pendencia-campos').hide();
+        }
+    });
+    
+    // Auto-save form data
+    $('#registro-form').on('input change', function() {
+        const formData = {};
+        $(this).find('input, textarea, select').each(function() {
+            const field = $(this);
+            if (field.attr('name')) {
+                formData[field.attr('name')] = field.val();
+            }
+        });
+        
+        localStorage.setItem('passometro_registro_form', JSON.stringify(formData));
+    });
+    
+    // Load saved data
+    const savedData = localStorage.getItem('passometro_registro_form');
+    if (savedData) {
+        const data = JSON.parse(savedData);
+        Object.keys(data).forEach(key => {
+            const field = $(`[name="${key}"]`);
+            if (field.length) {
+                field.val(data[key]);
+            }
+        });
+    }
+    
+    // Clear saved data on successful submit
+    $('#registro-form').on('submit', function() {
+        localStorage.removeItem('passometro_registro_form');
+    });
+});
+</script>
+{% endblock %} 
