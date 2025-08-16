@@ -1,0 +1,165 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: passometro_mysql_ip
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-12345678}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-passometro}
+      MYSQL_USER: ${MYSQL_USER:-passometro}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-passometro123}
+    volumes:
+      - mysql_data_ip:/var/lib/mysql
+      - ./backups:/backups
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - passometro_network_ip
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: passometro_redis_ip
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis_data_ip:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      timeout: 3s
+      retries: 5
+    networks:
+      - passometro_network_ip
+
+  # Web Application (Direto na porta 5001)
+  web:
+    build: .
+    container_name: passometro_web_ip
+    restart: unless-stopped
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-passometro}:${MYSQL_PASSWORD:-passometro123}@mysql:3306/${MYSQL_DATABASE:-passometro}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/1
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-jwt-secret-key-here}
+    volumes:
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+      - ./uploads:/app/uploads
+    ports:
+      - "5001:5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - passometro_network_ip
+
+  # Celery Worker
+  celery_worker:
+    build: .
+    container_name: passometro_celery_worker_ip
+    restart: unless-stopped
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=4
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-passometro}:${MYSQL_PASSWORD:-passometro123}@mysql:3306/${MYSQL_DATABASE:-passometro}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/1
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-jwt-secret-key-here}
+    volumes:
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+      - ./uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - passometro_network_ip
+
+  # Celery Beat (Scheduler)
+  celery_beat:
+    build: .
+    container_name: passometro_celery_beat_ip
+    restart: unless-stopped
+    command: celery -A celery_app.celery beat --loglevel=info
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-passometro}:${MYSQL_PASSWORD:-passometro123}@mysql:3306/${MYSQL_DATABASE:-passometro}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/1
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-jwt-secret-key-here}
+    volumes:
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+      - ./uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - passometro_network_ip
+
+  # Celery Flower (Monitor)
+  celery_flower:
+    build: .
+    container_name: passometro_celery_flower_ip
+    restart: unless-stopped
+    command: celery -A celery_app.celery flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin123}
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-passometro}:${MYSQL_PASSWORD:-passometro123}@mysql:3306/${MYSQL_DATABASE:-passometro}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/1
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - passometro_network_ip
+
+volumes:
+  mysql_data_ip:
+    driver: local
+  redis_data_ip:
+    driver: local
+
+networks:
+  passometro_network_ip:
+    driver: bridge 
