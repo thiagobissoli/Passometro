@@ -65,6 +65,7 @@ check_files() {
     local required_files=(
         "Dockerfile"
         "docker-compose.ip.yml"
+        "docker-compose.ip.simple.yml"
         "requirements.txt"
         "app.py"
         "models.py"
@@ -148,11 +149,11 @@ backup_previous() {
         rm -rf backup_previous
     fi
     
-    if docker-compose -f docker-compose.ip.yml ps | grep -q "Up"; then
+    if docker-compose -f docker-compose.ip.simple.yml ps | grep -q "Up"; then
         log "Fazendo backup da versão anterior..."
         
         # Parar containers
-        docker-compose -f docker-compose.ip.yml down
+        docker-compose -f docker-compose.ip.simple.yml down
         
         # Fazer backup
         mkdir -p backup_previous
@@ -167,18 +168,18 @@ deploy_application() {
     log "Iniciando deploy da aplicação..."
     
     # Parar containers existentes
-    docker-compose -f docker-compose.ip.yml down 2>/dev/null || true
+    docker-compose -f docker-compose.ip.simple.yml down 2>/dev/null || true
     
     # Remover containers antigos
     docker system prune -f
     
     # Build das imagens
     log "Fazendo build das imagens..."
-    docker-compose -f docker-compose.ip.yml build --no-cache
+    docker-compose -f docker-compose.ip.simple.yml build --no-cache
     
     # Iniciar serviços
     log "Iniciando serviços..."
-    docker-compose -f docker-compose.ip.yml up -d
+    docker-compose -f docker-compose.ip.simple.yml up -d
     
     # Aguardar serviços ficarem prontos
     log "Aguardando serviços ficarem prontos..."
@@ -186,7 +187,7 @@ deploy_application() {
     
     # Verificar status
     log "Verificando status dos serviços..."
-    docker-compose -f docker-compose.ip.yml ps
+    docker-compose -f docker-compose.ip.simple.yml ps
     
     log "Deploy da aplicação concluído"
 }
@@ -270,11 +271,11 @@ test_application() {
     done
     
     # Verificar containers
-    if docker-compose -f docker-compose.ip.yml ps | grep -q "Up"; then
+    if docker-compose -f docker-compose.ip.simple.yml ps | grep -q "Up"; then
         log "✅ Todos os containers estão rodando"
     else
         error "❌ Alguns containers não estão rodando"
-        docker-compose -f docker-compose.ip.yml ps
+        docker-compose -f docker-compose.ip.simple.yml ps
         exit 1
     fi
 }
@@ -296,10 +297,10 @@ show_info() {
     echo "   • Aplicação: localhost:5001"
     echo ""
     echo "🔍 Comandos Úteis:"
-    echo "   • Status: docker-compose -f docker-compose.ip.yml ps"
-    echo "   • Logs: docker-compose -f docker-compose.ip.yml logs -f"
-    echo "   • Restart: docker-compose -f docker-compose.ip.yml restart"
-    echo "   • Stop: docker-compose -f docker-compose.ip.yml down"
+    echo "   • Status: docker-compose -f docker-compose.ip.simple.yml ps"
+    echo "   • Logs: docker-compose -f docker-compose.ip.simple.yml logs -f"
+    echo "   • Restart: docker-compose -f docker-compose.ip.simple.yml restart"
+    echo "   • Stop: docker-compose -f docker-compose.ip.simple.yml down"
     echo ""
     echo "📝 Logs:"
     echo "   • Aplicação: tail -f logs/app.log"

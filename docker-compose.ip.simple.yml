@@ -16,10 +16,6 @@ services:
       - ./backups:/backups
     ports:
       - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
     networks:
       - passometro_network_ip
 
@@ -33,10 +29,6 @@ services:
       - redis_data_ip:/data
     ports:
       - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      timeout: 3s
-      retries: 5
     networks:
       - passometro_network_ip
 
@@ -64,10 +56,8 @@ services:
     ports:
       - "5001:5001"
     depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - mysql
+      - redis
     networks:
       - passometro_network_ip
 
@@ -94,10 +84,8 @@ services:
       - ./temp:/app/temp
       - ./uploads:/app/uploads
     depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - mysql
+      - redis
     networks:
       - passometro_network_ip
 
@@ -124,10 +112,8 @@ services:
       - ./temp:/app/temp
       - ./uploads:/app/uploads
     depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - mysql
+      - redis
     networks:
       - passometro_network_ip
 
@@ -149,8 +135,7 @@ services:
     ports:
       - "5555:5555"
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
     networks:
       - passometro_network_ip
 
